@@ -356,10 +356,12 @@ function obterMapaColunasPor_(aba, cabecalhos) {
  * ======================================================================== */
 
 var NOME_ABA_PLANNER = 'Planner';
-var CABECALHOS_PLANNER = ['Data', 'Título', 'Descrição', 'Início', 'Fim', 'Categoria', 'Concluída'];
+var CABECALHOS_PLANNER = ['Data', 'Data fim', 'Título', 'Descrição', 'Início', 'Fim',
+  'Categoria', 'Concluída', 'Processos SEI', 'Links', 'Notificação'];
 var COL_PLANNER = {
-  data: 'Data', titulo: 'Título', descricao: 'Descrição',
-  inicio: 'Início', fim: 'Fim', categoria: 'Categoria', concluida: 'Concluída'
+  data: 'Data', dataFim: 'Data fim', titulo: 'Título', descricao: 'Descrição',
+  inicio: 'Início', fim: 'Fim', categoria: 'Categoria', concluida: 'Concluída',
+  processos: 'Processos SEI', links: 'Links', notificacao: 'Notificação'
 };
 
 /** Lê todas as atividades do Planner. Chamado pelo cliente. */
@@ -377,12 +379,16 @@ function obterAtividades() {
       itens.push({
         linha: i + 2,
         data: deCelula_(r[mapa[COL_PLANNER.data] - 1]),
+        dataFim: deCelula_(r[mapa[COL_PLANNER.dataFim] - 1]),
         titulo: deCelula_(r[mapa[COL_PLANNER.titulo] - 1]),
         descricao: deCelula_(r[mapa[COL_PLANNER.descricao] - 1]),
         inicio: deCelula_(r[mapa[COL_PLANNER.inicio] - 1]),
         fim: deCelula_(r[mapa[COL_PLANNER.fim] - 1]),
         categoria: deCelula_(r[mapa[COL_PLANNER.categoria] - 1]),
-        concluida: ehVerdadeiro_(r[mapa[COL_PLANNER.concluida] - 1])
+        concluida: ehVerdadeiro_(r[mapa[COL_PLANNER.concluida] - 1]),
+        processos: deCelula_(r[mapa[COL_PLANNER.processos] - 1]),
+        links: deCelula_(r[mapa[COL_PLANNER.links] - 1]),
+        notificacao: deCelula_(r[mapa[COL_PLANNER.notificacao] - 1])
       });
     });
   }
@@ -409,18 +415,23 @@ function salvarAtividade(a) {
     aba.getRange(linha, mapa[COL_PLANNER.inicio]).setNumberFormat('@');
     aba.getRange(linha, mapa[COL_PLANNER.fim]).setNumberFormat('@');
     aba.getRange(linha, mapa[COL_PLANNER.data]).setNumberFormat('dd/mm/yyyy');
+    aba.getRange(linha, mapa[COL_PLANNER.dataFim]).setNumberFormat('dd/mm/yyyy');
 
     var faixa = aba.getRange(linha, 1, 1, ultCol);
     var row = novo ? novaLinhaVazia_(ultCol) : faixa.getValues()[0];
     function set(campo, valor) { row[mapa[COL_PLANNER[campo]] - 1] = valor; }
 
     set('data', paraCelula_(a.data));
+    set('dataFim', a.dataFim ? paraCelula_(a.dataFim) : '');
     set('titulo', a.titulo || '');
     set('descricao', a.descricao || '');
     set('inicio', a.inicio || '');
     set('fim', a.fim || '');
     set('categoria', a.categoria || 'Geral');
     set('concluida', a.concluida ? true : false);
+    set('processos', a.processos || '');
+    set('links', a.links || '');
+    set('notificacao', a.notificacao || '');
 
     faixa.setValues([row]);
     return obterAtividades();

@@ -374,6 +374,7 @@
         '<td data-rotulo="Links relacionados">' + celulaLinks(p) + '</td>' +
         '<td class="acoes-col">' +
           '<button class="acao" title="Editar" data-editar="' + p.linha + '">✏️</button>' +
+          '<button class="acao" title="Inserir no planner" data-planner="' + p.linha + '">🗓️</button>' +
           botaoArquivo +
           '<button class="acao excluir" title="Excluir" data-excluir="' + p.linha + '">🗑️</button>' +
         '</td></tr>';
@@ -477,6 +478,12 @@
     if (btnArquivar) { chamarServidor('arquivarProcesso', [Number(btnArquivar.dataset.arquivar), true], 'Processo arquivado.'); return; }
     var btnDesarquivar = e.target.closest('[data-desarquivar]');
     if (btnDesarquivar) { chamarServidor('arquivarProcesso', [Number(btnDesarquivar.dataset.desarquivar), false], 'Processo desarquivado.'); return; }
+    var btnPlanner = e.target.closest('[data-planner]');
+    if (btnPlanner) {
+      var pp = dados.find(function (x) { return x.linha == btnPlanner.dataset.planner; });
+      if (pp && typeof inserirProcessoNoPlanner === 'function') inserirProcessoNoPlanner(pp);
+      return;
+    }
     var btnExcluir = e.target.closest('[data-excluir]');
     if (btnExcluir) pedirExclusao(btnExcluir.dataset.excluir);
   });

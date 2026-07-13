@@ -329,6 +329,40 @@
   .ativ-card .acoes button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 3px 5px; border-radius: 6px; }
   .ativ-card .acoes button:hover { color: var(--ink); background: var(--surface-3); }
   .drawer-vazio { color: var(--muted); text-align: center; padding: 30px 10px; font-size: 13px; }
+  .ativ-card .titulo.clicavel { cursor: pointer; }
+  .ativ-card .titulo.clicavel:hover { color: var(--accent); }
+
+  /* Cartão de evento (detalhe) */
+  .evento-cab { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+  .evento-cab .barra { width: 4px; align-self: stretch; border-radius: 3px; flex: none; }
+  .evento-cab h2 { font-size: 17px; margin: 0 0 4px; }
+  .evento-cab .meta { color: var(--muted); font-size: 12.5px; }
+  .evento-secao { border-top: 1px solid var(--hairline); padding: 12px 0; }
+  .evento-secao:first-of-type { border-top: none; }
+  .evento-secao .rot { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .evento-secao .txt { color: var(--ink-2); font-size: 13.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ref-lista { display: flex; flex-direction: column; gap: 6px; }
+  .ref-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .ref-item .sei-num { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
+  .ref-item a.link-ext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .evento-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .evento-acoes .btn { flex: 1 1 auto; }
+  .badge-info { display: inline-flex; align-items: center; gap: 5px; background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--ink-2); }
+
+  /* Gerador de documento */
+  .doc-saida { background: var(--page); border: 1px solid var(--hairline); border-radius: 10px; padding: 14px; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12.5px; line-height: 1.65; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 46vh; overflow-y: auto; min-height: 200px; }
+
+  /* Resumo */
+  .resumo-cabecalho { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .resumo-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 10px; margin-bottom: 16px; }
+  .resumo-tile { background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 10px; padding: 10px 12px; }
+  .resumo-tile .rot { color: var(--muted); font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .resumo-tile .val { font-size: 22px; font-weight: 700; margin-top: 2px; }
+  .resumo-lista { display: flex; flex-direction: column; gap: 8px; max-height: 42vh; overflow-y: auto; }
+  .resumo-dia { border-left: 3px solid; padding: 6px 10px; background: var(--surface-2); border-radius: 8px; }
+  .resumo-dia .rd-data { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+  .resumo-dia .rd-item { font-size: 12.5px; color: var(--ink-2); }
+  .resumo-vazio { color: var(--muted); text-align: center; padding: 24px; }
 
   @media (max-width: 640px) {
     .planner-wrap { padding: 16px 12px 40px; }

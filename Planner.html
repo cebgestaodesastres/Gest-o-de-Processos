@@ -16,6 +16,7 @@
         <button data-modo="mes">Mês</button>
       </div>
       <div class="acoes">
+        <button class="btn" id="btnResumo">📊 Resumo</button>
         <button class="btn" id="calHoje">Hoje</button>
         <button class="btn primario" id="calNova">+ Nova atividade</button>
       </div>
@@ -54,7 +55,7 @@
   </div>
 </aside>
 
-<!-- Modal de atividade -->
+<!-- Modal de atividade (criar/editar) -->
 <div class="fundo-modal" id="fundoAtividade">
   <div class="modal">
     <h2 id="tituloAtividade">Nova atividade</h2>
@@ -66,24 +67,51 @@
           <input id="aTitulo" required placeholder="Reunião, operação, treinamento…">
         </div>
         <div class="campo">
-          <label for="aData">Data</label>
+          <label for="aData">Data (início)</label>
           <input type="date" id="aData" required>
+        </div>
+        <div class="campo">
+          <label for="aDataFim">Data fim (opcional)</label>
+          <input type="date" id="aDataFim">
+          <span class="dica">Preencha para atividades de vários dias.</span>
+        </div>
+        <div class="campo">
+          <label for="aInicio">Hora início</label>
+          <input type="time" id="aInicio">
+        </div>
+        <div class="campo">
+          <label for="aFim">Hora fim</label>
+          <input type="time" id="aFim">
         </div>
         <div class="campo">
           <label for="aCategoria">Categoria</label>
           <select id="aCategoria"></select>
         </div>
         <div class="campo">
-          <label for="aInicio">Início</label>
-          <input type="time" id="aInicio">
-        </div>
-        <div class="campo">
-          <label for="aFim">Fim</label>
-          <input type="time" id="aFim">
+          <label for="aNotificacao">Notificar</label>
+          <select id="aNotificacao">
+            <option value="">Sem notificação</option>
+            <option value="No dia">No dia</option>
+            <option value="1 hora antes">1 hora antes</option>
+            <option value="3 horas antes">3 horas antes</option>
+            <option value="1 dia antes">1 dia antes</option>
+            <option value="2 dias antes">2 dias antes</option>
+            <option value="1 semana antes">1 semana antes</option>
+          </select>
         </div>
         <div class="campo largura-total">
           <label for="aDescricao">Detalhes</label>
           <textarea id="aDescricao" placeholder="Local, efetivo, observações…"></textarea>
+        </div>
+        <div class="campo largura-total">
+          <label for="aProcessos">Processos SEI relacionados</label>
+          <textarea id="aProcessos" placeholder="1400.01.0000000/2026-00 | https://sei.mg.gov.br/..."></textarea>
+          <span class="dica">Um por linha. Formato: "número | link" (o link é opcional).</span>
+        </div>
+        <div class="campo largura-total">
+          <label for="aLinks">Links de referência</label>
+          <textarea id="aLinks" placeholder="Rótulo | https://exemplo.com"></textarea>
+          <span class="dica">Um por linha. Opcional: "Rótulo | https://endereço".</span>
         </div>
       </div>
       <div class="rodape">
@@ -92,6 +120,73 @@
         <button type="submit" class="btn primario">Salvar</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Modal de detalhe do evento -->
+<div class="fundo-modal" id="fundoEvento">
+  <div class="modal">
+    <div id="eventoConteudo"></div>
+    <div class="evento-acoes">
+      <button type="button" class="btn primario" id="evtGerarDoc">📄 Gerar documento</button>
+      <button type="button" class="btn" id="evtEditar">✏️ Editar</button>
+      <button type="button" class="btn perigo" id="evtExcluir">🗑️ Excluir</button>
+      <button type="button" class="btn" id="evtFechar">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de geração de documento -->
+<div class="fundo-modal" id="fundoDoc">
+  <div class="modal largo">
+    <h2>Gerar documento</h2>
+    <div class="grade" style="margin-bottom:12px">
+      <div class="campo">
+        <label for="docTipo">Tipo de documento</label>
+        <select id="docTipo">
+          <option value="Ordem de Serviço">Ordem de Serviço</option>
+          <option value="Ofício">Ofício</option>
+          <option value="Memorando">Memorando</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="docSkill">Modelo / Skill</label>
+        <select id="docSkill"><option value="">Template padrão</option></select>
+      </div>
+    </div>
+    <div class="campo largura-total">
+      <label>Prévia do documento</label>
+      <div class="doc-saida" id="docSaida"></div>
+      <span class="dica" id="docDica"></span>
+    </div>
+    <div class="rodape">
+      <button type="button" class="btn" id="docFechar">Fechar</button>
+      <button type="button" class="btn" id="docCopiar">📋 Copiar</button>
+      <button type="button" class="btn primario" id="docRegenerar">↻ Gerar novamente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de resumo -->
+<div class="fundo-modal" id="fundoResumo">
+  <div class="modal largo">
+    <h2>Resumo de atividades</h2>
+    <div class="resumo-cabecalho">
+      <div class="seg-toggle" id="resumoPeriodo">
+        <button class="ativo" data-periodo="semana">Semana</button>
+        <button data-periodo="mes">Mês</button>
+        <button data-periodo="semestre">Semestre</button>
+        <button data-periodo="ano">Ano</button>
+      </div>
+      <span class="dica" id="resumoFaixa"></span>
+    </div>
+    <div class="resumo-tiles" id="resumoTiles"></div>
+    <div class="resumo-lista" id="resumoLista"></div>
+    <div class="rodape">
+      <button type="button" class="btn" id="resumoFechar">Fechar</button>
+      <button type="button" class="btn primario" id="resumoCopiar">📋 Copiar resumo</button>
+    </div>
   </div>
 </div>
 
@@ -116,6 +211,8 @@
   var anoRef = new Date().getFullYear();
   var calRef = new Date();
   var diaAberto = null;
+  var eventoAberto = null;    // linha do evento no modal de detalhe
+  var resumoPeriodoAtual = 'semana';
 
   function cap(s) { return String(s).charAt(0).toUpperCase() + String(s).slice(1); }
   function corCategoria(nome) {
@@ -125,10 +222,41 @@
   function isoData(ano, mes, dia) {
     return ano + '-' + String(mes + 1).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
   }
+  function fimDe(a) { return ehData(a.dataFim) && a.dataFim >= a.data ? a.dataFim : a.data; }
+  function noDia(a, iso) { return ehData(a.data) && iso >= a.data && iso <= fimDe(a); }
   function atividadesDoDia(iso) {
-    return atividades.filter(function (a) { return a.data === iso; }).sort(function (a, b) {
+    return atividades.filter(function (a) { return noDia(a, iso); }).sort(function (a, b) {
       return (a.inicio || '99:99') < (b.inicio || '99:99') ? -1 : 1;
     });
+  }
+  function periodoTexto(a) {
+    var ini = formatarData(a.data);
+    return ehData(a.dataFim) && a.dataFim > a.data ? ini + ' a ' + formatarData(a.dataFim) : ini;
+  }
+  function horaTexto(a) {
+    if (!a.inicio) return 'Sem horário';
+    return a.inicio + (a.fim ? '–' + a.fim : '');
+  }
+  function achar(linha) { return atividades.filter(function (x) { return x.linha == linha; })[0]; }
+
+  // ----- Render de listas de SEI / links (reusa ehUrl/ancora do módulo Gestão) -----
+  function renderRefs(bruto, comoSei) {
+    var itens = String(bruto || '').split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!itens.length) return '';
+    return '<div class="ref-lista">' + itens.map(function (l) {
+      var rot = l, url = l, barra = l.indexOf('|');
+      if (barra !== -1) { rot = l.slice(0, barra).trim(); url = l.slice(barra + 1).trim(); }
+      var temUrl = ehUrl(url);
+      if (comoSei) {
+        var num = (barra !== -1) ? rot : (temUrl ? '' : l);
+        var partes = '';
+        if (num) partes += '<span class="sei-num">' + escapar(num) + '</span>';
+        if (temUrl) partes += ancora(url, 'abrir ↗');
+        return '<div class="ref-item">' + (partes || '<span class="sei-num">' + escapar(l) + '</span>') + '</div>';
+      }
+      if (temUrl) { if (!rot || rot === url) rot = rotuloUrl(url); return '<div class="ref-item">' + ancora(url, rot) + '</div>'; }
+      return '<div class="ref-item"><span class="sei-num">' + escapar(l) + '</span></div>';
+    }).join('') + '</div>';
   }
 
   function carregarPlanner() {
@@ -144,6 +272,7 @@
     atividades = r.atividades || [];
     renderPlanner();
     if (diaAberto) renderDrawer();
+    if (eventoAberto && achar(eventoAberto)) renderEvento(eventoAberto); else $('fundoEvento').classList.remove('aberto');
   }
   function renderPlanner() { if (modoPlanner === 'ano') renderAno(); else renderCalendario(); }
 
@@ -160,10 +289,10 @@
     $('vistaMes').style.display = m === 'mes' ? '' : 'none';
     $('calNavAno').style.display = m === 'ano' ? '' : 'none';
     $('calNavMes').style.display = m === 'mes' ? '' : 'none';
-    document.querySelectorAll('.seg-toggle button').forEach(function (b) { b.classList.toggle('ativo', b.dataset.modo === m); });
+    document.querySelectorAll('.seg-toggle button[data-modo]').forEach(function (b) { b.classList.toggle('ativo', b.dataset.modo === m); });
     renderPlanner();
   }
-  document.querySelectorAll('.seg-toggle button').forEach(function (b) {
+  document.querySelectorAll('.seg-toggle button[data-modo]').forEach(function (b) {
     b.addEventListener('click', function () { mudarModo(b.dataset.modo); });
   });
 
@@ -176,7 +305,9 @@
       var inicioSemana = new Date(anoRef, m, 1).getDay();
       var diasNoMes = new Date(anoRef, m + 1, 0).getDate();
       var prefixoMes = isoData(anoRef, m, 1).slice(0, 7);
-      var qtdMes = atividades.filter(function (a) { return ehData(a.data) && a.data.slice(0, 7) === prefixoMes; }).length;
+      var qtdMes = atividades.filter(function (a) {
+        return ehData(a.data) && a.data.slice(0, 7) <= prefixoMes && fimDe(a).slice(0, 7) >= prefixoMes;
+      }).length;
       var temHoje = hoje.slice(0, 7) === prefixoMes;
       var celulas = '';
       for (var i = 0; i < inicioSemana; i++) celulas += '<div class="mini-dia vazia"></div>';
@@ -228,9 +359,10 @@
       var doDia = atividadesDoDia(iso);
       var chips = doDia.slice(0, 3).map(function (a) {
         var cor = corCategoria(a.categoria);
+        var multi = ehData(a.dataFim) && a.dataFim > a.data ? '↔ ' : '';
         return '<div class="cal-chip' + (a.concluida ? ' feito' : '') + '" style="border-left-color:' + cor +
           ';background:' + rgba(cor, 0.14) + ';color:' + cor + '">' +
-          (a.inicio ? escapar(a.inicio) + ' ' : '') + escapar(a.titulo) + '</div>';
+          multi + (a.inicio ? escapar(a.inicio) + ' ' : '') + escapar(a.titulo) + '</div>';
       }).join('');
       var mais = doDia.length > 3 ? '<div class="cal-mais">+' + (doDia.length - 3) + ' mais</div>' : '';
       html += '<div class="cal-dia' + fora + eHoje + '" data-dia="' + iso + '" data-qtd="' +
@@ -280,16 +412,23 @@
     }
     $('drawerCorpo').innerHTML = lista.map(function (a) {
       var cor = corCategoria(a.categoria);
-      var hora = a.inicio ? (escapar(a.inicio) + (a.fim ? '–' + escapar(a.fim) : '')) : 'Sem horário';
+      var qtdSei = String(a.processos || '').split(/\r?\n/).filter(function (x) { return x.trim(); }).length;
+      var qtdLink = String(a.links || '').split(/\r?\n/).filter(function (x) { return x.trim(); }).length;
+      var selos = '';
+      if (a.notificacao) selos += ' <span class="badge-info">🔔 ' + escapar(a.notificacao) + '</span>';
+      if (qtdSei) selos += ' <span class="badge-info">📎 ' + qtdSei + ' SEI</span>';
+      if (qtdLink) selos += ' <span class="badge-info">🔗 ' + qtdLink + '</span>';
       return '<div class="ativ-card' + (a.concluida ? ' feita' : '') + '" style="border-left-color:' + cor + '">' +
         '<div class="linha1">' +
-          '<span class="titulo">' + escapar(a.titulo) + '</span>' +
+          '<span class="titulo clicavel" data-abrir="' + a.linha + '">' + escapar(a.titulo) + '</span>' +
           '<span class="cat-tag" style="background:' + rgba(cor, 0.16) + ';color:' + cor + '">' + escapar(a.categoria) + '</span>' +
         '</div>' +
-        '<div class="hora">🕐 ' + hora + '</div>' +
+        '<div class="hora">🕐 ' + escapar(horaTexto(a)) + (ehData(a.dataFim) && a.dataFim > a.data ? ' · ' + escapar(periodoTexto(a)) : '') + '</div>' +
         (a.descricao ? '<div class="desc">' + escapar(a.descricao) + '</div>' : '') +
+        (selos ? '<div>' + selos + '</div>' : '') +
         '<div class="acoes">' +
           '<button title="' + (a.concluida ? 'Reabrir' : 'Concluir') + '" data-feito="' + a.linha + '">' + (a.concluida ? '↩️' : '✅') + '</button>' +
+          '<button title="Abrir cartão" data-abrir="' + a.linha + '">🔍</button>' +
           '<button title="Editar" data-edit-ativ="' + a.linha + '">✏️</button>' +
           '<button title="Excluir" data-del-ativ="' + a.linha + '">🗑️</button>' +
         '</div></div>';
@@ -300,16 +439,96 @@
   $('drawerNova').addEventListener('click', function () { abrirFormAtividade(null, diaAberto || hojeIso()); });
 
   $('drawerCorpo').addEventListener('click', function (e) {
+    var bAbrir = e.target.closest('[data-abrir]');
+    if (bAbrir) { abrirEvento(bAbrir.dataset.abrir); return; }
     var bE = e.target.closest('[data-edit-ativ]');
-    if (bE) { var a = atividades.filter(function (x) { return x.linha == bE.dataset.editAtiv; })[0]; if (a) abrirFormAtividade(a); return; }
+    if (bE) { var a = achar(bE.dataset.editAtiv); if (a) abrirFormAtividade(a); return; }
     var bF = e.target.closest('[data-feito]');
     if (bF) {
-      var at = atividades.filter(function (x) { return x.linha == bF.dataset.feito; })[0];
+      var at = achar(bF.dataset.feito);
       chamarFn('alternarConcluidaAtividade', [Number(bF.dataset.feito), at ? !at.concluida : true], aplicarPlanner);
       return;
     }
     var bD = e.target.closest('[data-del-ativ]');
     if (bD && confirm('Excluir esta atividade?')) chamarFn('excluirAtividade', [Number(bD.dataset.delAtiv)], aplicarPlanner, 'Atividade excluída.');
+  });
+
+  // ----- Cartão de detalhe do evento -----
+  function abrirEvento(linha) { eventoAberto = Number(linha); renderEvento(eventoAberto); $('fundoEvento').classList.add('aberto'); }
+  function fecharEvento() { $('fundoEvento').classList.remove('aberto'); eventoAberto = null; }
+  function renderEvento(linha) {
+    var a = achar(linha);
+    if (!a) { fecharEvento(); return; }
+    var cor = corCategoria(a.categoria);
+    var html = '<div class="evento-cab">' +
+      '<span class="barra" style="background:' + cor + '"></span>' +
+      '<div><h2>' + escapar(a.titulo) + '</h2>' +
+      '<div class="meta"><span class="cat-tag" style="background:' + rgba(cor, 0.16) + ';color:' + cor + '">' + escapar(a.categoria) + '</span> · ' +
+      escapar(periodoTexto(a)) + ' · 🕐 ' + escapar(horaTexto(a)) + '</div></div></div>';
+    if (a.descricao) html += '<div class="evento-secao"><div class="rot">📝 Detalhes</div><div class="txt">' + escapar(a.descricao) + '</div></div>';
+    var sei = renderRefs(a.processos, true);
+    if (sei) html += '<div class="evento-secao"><div class="rot">📎 Processos SEI</div>' + sei + '</div>';
+    var links = renderRefs(a.links, false);
+    if (links) html += '<div class="evento-secao"><div class="rot">🔗 Links de referência</div>' + links + '</div>';
+    html += '<div class="evento-secao"><div class="rot">🔔 Notificação</div><div class="txt">' +
+      (a.notificacao ? escapar(a.notificacao) + ' (envio por e-mail/WhatsApp — configuração pendente)' : 'Nenhuma programada.') + '</div></div>';
+    $('eventoConteudo').innerHTML = html;
+  }
+  $('evtFechar').addEventListener('click', fecharEvento);
+  $('fundoEvento').addEventListener('click', function (e) { if (e.target === this) fecharEvento(); });
+  $('evtEditar').addEventListener('click', function () { var a = achar(eventoAberto); if (a) { fecharEvento(); abrirFormAtividade(a); } });
+  $('evtExcluir').addEventListener('click', function () {
+    if (eventoAberto && confirm('Excluir esta atividade?')) {
+      var linha = eventoAberto; fecharEvento();
+      chamarFn('excluirAtividade', [Number(linha)], aplicarPlanner, 'Atividade excluída.');
+    }
+  });
+  $('evtGerarDoc').addEventListener('click', function () { var a = achar(eventoAberto); if (a) abrirDoc(a); });
+
+  // ----- Gerador de documento (template) -----
+  var eventoDoc = null;
+  function abrirDoc(a) {
+    eventoDoc = a;
+    var sel = $('docSkill');
+    var skillsDisp = (typeof skills !== 'undefined' && skills) ? skills : [];
+    sel.innerHTML = '<option value="">Template padrão</option>' +
+      skillsDisp.map(function (s) { return '<option value="' + escapar(s.nome) + '">Skill: ' + escapar(s.nome) + '</option>'; }).join('');
+    // pré-seleciona uma skill de OS, se houver
+    var os = skillsDisp.filter(function (s) { return /ordem|servi|os\b/i.test(s.nome); })[0];
+    if (os) { $('docTipo').value = 'Ordem de Serviço'; sel.value = os.nome; }
+    gerarDoc();
+    $('fundoDoc').classList.add('aberto');
+  }
+  function gerarDoc() {
+    var a = eventoDoc; if (!a) return;
+    var tipo = $('docTipo').value;
+    var skill = $('docSkill').value;
+    var hoje = formatarData(hojeIso());
+    var sei = String(a.processos || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean).join('\n   ') || '(sem processos vinculados)';
+    var refs = String(a.links || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean).join('\n   ') || '(sem referências)';
+    var corpo =
+      tipo.toUpperCase() + ' Nº ______/' + (a.data ? a.data.slice(0, 4) : new Date().getFullYear()) + '\n\n' +
+      'ASSUNTO: ' + (a.titulo || '') + '\n\n' +
+      '1. FINALIDADE\n   ' + (a.descricao || a.titulo || '') + '\n\n' +
+      '2. DATA / PERÍODO\n   ' + periodoTexto(a) + (a.inicio ? '  ·  ' + horaTexto(a) : '') + '\n\n' +
+      '3. PROCESSOS SEI RELACIONADOS\n   ' + sei + '\n\n' +
+      '4. REFERÊNCIAS\n   ' + refs + '\n\n' +
+      'Belo Horizonte, ' + hoje + '.\n\n' +
+      '_______________________________________\n[Autoridade responsável]';
+    $('docSaida').textContent = corpo;
+    $('docDica').textContent = skill
+      ? 'Rascunho por template. Com a skill "' + skill + '" + API do Claude, este texto seria redigido no padrão completo da skill.'
+      : 'Rascunho por template. Escolha uma skill acima para usar o modelo dela (requer geração por IA — a combinar).';
+  }
+  $('docTipo').addEventListener('change', gerarDoc);
+  $('docSkill').addEventListener('change', gerarDoc);
+  $('docRegenerar').addEventListener('click', gerarDoc);
+  $('docFechar').addEventListener('click', function () { $('fundoDoc').classList.remove('aberto'); });
+  $('fundoDoc').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
+  $('docCopiar').addEventListener('click', function () {
+    var txt = $('docSaida').textContent;
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast('Documento copiado.'); }, function () { toast('Não foi possível copiar.', true); });
+    else toast('Cópia não suportada neste navegador.', true);
   });
 
   // ----- Formulário de atividade -----
@@ -319,10 +538,14 @@
     $('aLinha').value = a ? a.linha : '';
     $('aTitulo').value = a ? a.titulo : '';
     $('aData').value = a ? (ehData(a.data) ? a.data : dataPadrao) : (dataPadrao || hojeIso());
+    $('aDataFim').value = a && ehData(a.dataFim) ? a.dataFim : '';
     $('aCategoria').value = a ? a.categoria : 'Geral';
+    $('aNotificacao').value = a ? (a.notificacao || '') : '';
     $('aInicio').value = a && a.inicio ? a.inicio : '';
     $('aFim').value = a && a.fim ? a.fim : '';
     $('aDescricao').value = a ? a.descricao : '';
+    $('aProcessos').value = a ? (a.processos || '') : '';
+    $('aLinks').value = a ? (a.links || '') : '';
     $('btnExcluirAtiv').style.display = a ? '' : 'none';
     $('btnExcluirAtiv').dataset.linha = a ? a.linha : '';
     $('fundoAtividade').classList.add('aberto');
@@ -342,12 +565,17 @@
       linha: $('aLinha').value || null,
       titulo: $('aTitulo').value.trim(),
       data: $('aData').value,
+      dataFim: $('aDataFim').value || '',
       categoria: $('aCategoria').value,
+      notificacao: $('aNotificacao').value,
       inicio: $('aInicio').value || '',
       fim: $('aFim').value || '',
-      descricao: $('aDescricao').value.trim()
+      descricao: $('aDescricao').value.trim(),
+      processos: $('aProcessos').value.trim(),
+      links: $('aLinks').value.trim()
     };
     if (!a.titulo || !a.data) { toast('Informe título e data.', true); return; }
+    if (a.dataFim && a.dataFim < a.data) { toast('A data fim é anterior à data de início.', true); return; }
     fecharFormAtividade();
     chamarFn('salvarAtividade', [a], function (r) {
       atividades = r.atividades || [];
@@ -358,4 +586,93 @@
       if (diaAberto) renderDrawer();
     }, a.linha ? 'Atividade atualizada.' : 'Atividade criada.');
   });
+
+  // ----- Resumo -----
+  function faixaPeriodo(periodo) {
+    var h = new Date();
+    var ini, fim;
+    if (periodo === 'semana') {
+      ini = new Date(h.getFullYear(), h.getMonth(), h.getDate() - h.getDay());
+      fim = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + 6);
+    } else if (periodo === 'mes') {
+      ini = new Date(h.getFullYear(), h.getMonth(), 1);
+      fim = new Date(h.getFullYear(), h.getMonth() + 1, 0);
+    } else if (periodo === 'semestre') {
+      var s = h.getMonth() < 6 ? 0 : 6;
+      ini = new Date(h.getFullYear(), s, 1);
+      fim = new Date(h.getFullYear(), s + 6, 0);
+    } else {
+      ini = new Date(h.getFullYear(), 0, 1);
+      fim = new Date(h.getFullYear(), 11, 31);
+    }
+    return [isoData(ini.getFullYear(), ini.getMonth(), ini.getDate()), isoData(fim.getFullYear(), fim.getMonth(), fim.getDate())];
+  }
+  function atividadesNoPeriodo(iIni, iFim) {
+    return atividades.filter(function (a) { return ehData(a.data) && a.data <= iFim && fimDe(a) >= iIni; })
+      .sort(function (a, b) { return a.data < b.data ? -1 : a.data > b.data ? 1 : (a.inicio || '') < (b.inicio || '') ? -1 : 1; });
+  }
+  function renderResumo(periodo) {
+    resumoPeriodoAtual = periodo;
+    document.querySelectorAll('#resumoPeriodo button').forEach(function (b) { b.classList.toggle('ativo', b.dataset.periodo === periodo); });
+    var faixa = faixaPeriodo(periodo);
+    $('resumoFaixa').textContent = formatarData(faixa[0]) + ' — ' + formatarData(faixa[1]);
+    var lista = atividadesNoPeriodo(faixa[0], faixa[1]);
+
+    var porCat = {}, concluidas = 0;
+    lista.forEach(function (a) { porCat[a.categoria] = (porCat[a.categoria] || 0) + 1; if (a.concluida) concluidas++; });
+    var tiles = '<div class="resumo-tile"><div class="rot">Total</div><div class="val">' + lista.length + '</div></div>' +
+      '<div class="resumo-tile"><div class="rot">✅ Concluídas</div><div class="val">' + concluidas + '</div></div>';
+    CATEGORIAS_PLANNER.forEach(function (c) {
+      if (!porCat[c.nome]) return;
+      tiles += '<div class="resumo-tile"><div class="rot"><span class="ponto" style="background:' + c.cor + '"></span>' + escapar(c.nome) + '</div><div class="val">' + porCat[c.nome] + '</div></div>';
+    });
+    $('resumoTiles').innerHTML = tiles;
+
+    if (!lista.length) { $('resumoLista').innerHTML = '<div class="resumo-vazio">Nenhuma atividade neste período.</div>'; return; }
+    $('resumoLista').innerHTML = lista.map(function (a) {
+      var cor = corCategoria(a.categoria);
+      return '<div class="resumo-dia" style="border-left-color:' + cor + '">' +
+        '<div class="rd-data">' + escapar(periodoTexto(a)) + (a.inicio ? ' · ' + escapar(a.inicio) : '') + '</div>' +
+        '<div class="rd-item">' + (a.concluida ? '✅ ' : '') + escapar(a.titulo) + ' — <span style="color:' + cor + '">' + escapar(a.categoria) + '</span></div>' +
+        '</div>';
+    }).join('');
+  }
+  function resumoTexto() {
+    var faixa = faixaPeriodo(resumoPeriodoAtual);
+    var lista = atividadesNoPeriodo(faixa[0], faixa[1]);
+    var linhas = ['RESUMO (' + resumoPeriodoAtual + '): ' + formatarData(faixa[0]) + ' a ' + formatarData(faixa[1]),
+      'Total de atividades: ' + lista.length, ''];
+    lista.forEach(function (a) {
+      linhas.push('• ' + periodoTexto(a) + (a.inicio ? ' ' + a.inicio : '') + ' — ' + a.titulo + ' [' + a.categoria + ']' + (a.concluida ? ' (concluída)' : ''));
+    });
+    return linhas.join('\n');
+  }
+  $('btnResumo').addEventListener('click', function () { renderResumo(resumoPeriodoAtual); $('fundoResumo').classList.add('aberto'); });
+  document.querySelectorAll('#resumoPeriodo button').forEach(function (b) {
+    b.addEventListener('click', function () { renderResumo(b.dataset.periodo); });
+  });
+  $('resumoFechar').addEventListener('click', function () { $('fundoResumo').classList.remove('aberto'); });
+  $('fundoResumo').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
+  $('resumoCopiar').addEventListener('click', function () {
+    var txt = resumoTexto();
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast('Resumo copiado.'); }, function () { toast('Não foi possível copiar.', true); });
+    else toast('Cópia não suportada neste navegador.', true);
+  });
+
+  /* ----- Integração: inserir um processo do Controle de Processos no Planner ----- */
+  function inserirProcessoNoPlanner(p) {
+    trocarView('planner');
+    var abrir = function () {
+      abrirFormAtividade(null, ehData(p.prazo) ? p.prazo : hojeIso());
+      $('aTitulo').value = p.descricao || (p.processo && p.processo !== '-' ? p.processo : 'Processo');
+      $('aCategoria').value = 'Prazo';
+      var sei = (p.processo && p.processo !== '-' ? p.processo : '');
+      if (p.link) sei += (sei ? ' | ' : '') + p.link;
+      $('aProcessos').value = sei;
+      if (p.obs) $('aDescricao').value = p.obs;
+    };
+    if (!plannerCarregado) {
+      chamarFn('obterAtividades', [], function (r) { atividades = r.atividades || []; plannerCarregado = true; renderLegenda(); renderPlanner(); abrir(); });
+    } else { abrir(); }
+  }
 </script>
