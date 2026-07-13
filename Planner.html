@@ -1,0 +1,361 @@
+<!-- ===================== Planner ===================== -->
+<section class="view" id="view-planner">
+  <div class="planner-wrap">
+    <div class="cal-cabecalho">
+      <div class="cal-nav" id="calNavAno">
+        <button id="anoAnterior" title="Ano anterior">‹</button>
+        <button id="anoProximo" title="Próximo ano">›</button>
+      </div>
+      <div class="cal-nav" id="calNavMes" style="display:none">
+        <button id="mesAnterior" title="Mês anterior">‹</button>
+        <button id="mesProximo" title="Próximo mês">›</button>
+      </div>
+      <h1 id="calTitulo">—</h1>
+      <div class="seg-toggle">
+        <button class="ativo" data-modo="ano">Ano</button>
+        <button data-modo="mes">Mês</button>
+      </div>
+      <div class="acoes">
+        <button class="btn" id="calHoje">Hoje</button>
+        <button class="btn primario" id="calNova">+ Nova atividade</button>
+      </div>
+    </div>
+
+    <div class="cal-legenda" id="calLegenda"></div>
+
+    <!-- Visão anual -->
+    <div class="mini-grade-ano" id="vistaAno"></div>
+
+    <!-- Visão mensal detalhada -->
+    <div id="vistaMes" style="display:none">
+      <div class="cal">
+        <div class="cal-semana-nomes">
+          <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+        </div>
+        <div class="cal-grade" id="calGrade"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Drawer do dia -->
+<div class="drawer-fundo" id="drawerFundo"></div>
+<aside class="drawer" id="drawerDia">
+  <div class="drawer-topo">
+    <div>
+      <div class="dia-txt" id="drawerDiaTxt">—</div>
+      <div class="dia-sub" id="drawerDiaSub"></div>
+    </div>
+    <button class="fechar" id="drawerFechar" aria-label="Fechar">×</button>
+  </div>
+  <div class="drawer-corpo" id="drawerCorpo"></div>
+  <div class="drawer-rodape">
+    <button class="btn primario" id="drawerNova">+ Nova atividade neste dia</button>
+  </div>
+</aside>
+
+<!-- Modal de atividade -->
+<div class="fundo-modal" id="fundoAtividade">
+  <div class="modal">
+    <h2 id="tituloAtividade">Nova atividade</h2>
+    <form id="formAtividade">
+      <input type="hidden" id="aLinha">
+      <div class="grade">
+        <div class="campo largura-total">
+          <label for="aTitulo">Título</label>
+          <input id="aTitulo" required placeholder="Reunião, operação, treinamento…">
+        </div>
+        <div class="campo">
+          <label for="aData">Data</label>
+          <input type="date" id="aData" required>
+        </div>
+        <div class="campo">
+          <label for="aCategoria">Categoria</label>
+          <select id="aCategoria"></select>
+        </div>
+        <div class="campo">
+          <label for="aInicio">Início</label>
+          <input type="time" id="aInicio">
+        </div>
+        <div class="campo">
+          <label for="aFim">Fim</label>
+          <input type="time" id="aFim">
+        </div>
+        <div class="campo largura-total">
+          <label for="aDescricao">Detalhes</label>
+          <textarea id="aDescricao" placeholder="Local, efetivo, observações…"></textarea>
+        </div>
+      </div>
+      <div class="rodape">
+        <button type="button" class="btn perigo" id="btnExcluirAtiv" style="margin-right:auto;display:none">Excluir</button>
+        <button type="button" class="btn" id="btnCancelarAtiv">Cancelar</button>
+        <button type="submit" class="btn primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  /* ===================== Planner ===================== */
+  var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  var DIAS_SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  var CATEGORIAS_PLANNER = [
+    { nome: 'Operação', cor: '#e5793b' },
+    { nome: 'Treinamento', cor: '#199e70' },
+    { nome: 'Supervisão', cor: '#9085e9' },
+    { nome: 'Reunião', cor: '#3987e5' },
+    { nome: 'Prazo', cor: '#d03b3b' },
+    { nome: 'Feriado', cor: '#fab219' },
+    { nome: 'Geral', cor: '#898781' }
+  ];
+
+  var atividades = [];
+  var plannerCarregado = false;
+  var modoPlanner = 'ano';
+  var anoRef = new Date().getFullYear();
+  var calRef = new Date();
+  var diaAberto = null;
+
+  function cap(s) { return String(s).charAt(0).toUpperCase() + String(s).slice(1); }
+  function corCategoria(nome) {
+    var c = CATEGORIAS_PLANNER.filter(function (x) { return x.nome === nome; })[0];
+    return c ? c.cor : '#3987e5';
+  }
+  function isoData(ano, mes, dia) {
+    return ano + '-' + String(mes + 1).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
+  }
+  function atividadesDoDia(iso) {
+    return atividades.filter(function (a) { return a.data === iso; }).sort(function (a, b) {
+      return (a.inicio || '99:99') < (b.inicio || '99:99') ? -1 : 1;
+    });
+  }
+
+  function carregarPlanner() {
+    chamarFn('obterAtividades', [], function (r) {
+      atividades = r.atividades || [];
+      plannerCarregado = true;
+      renderLegenda();
+      renderPlanner();
+      if (diaAberto) renderDrawer();
+    });
+  }
+  function aplicarPlanner(r) {
+    atividades = r.atividades || [];
+    renderPlanner();
+    if (diaAberto) renderDrawer();
+  }
+  function renderPlanner() { if (modoPlanner === 'ano') renderAno(); else renderCalendario(); }
+
+  function renderLegenda() {
+    $('calLegenda').innerHTML = CATEGORIAS_PLANNER.map(function (c) {
+      return '<div class="item"><span class="ponto" style="background:' + c.cor + '"></span>' + escapar(c.nome) + '</div>';
+    }).join('');
+  }
+
+  // ----- Alternância de modo -----
+  function mudarModo(m) {
+    modoPlanner = m;
+    $('vistaAno').style.display = m === 'ano' ? '' : 'none';
+    $('vistaMes').style.display = m === 'mes' ? '' : 'none';
+    $('calNavAno').style.display = m === 'ano' ? '' : 'none';
+    $('calNavMes').style.display = m === 'mes' ? '' : 'none';
+    document.querySelectorAll('.seg-toggle button').forEach(function (b) { b.classList.toggle('ativo', b.dataset.modo === m); });
+    renderPlanner();
+  }
+  document.querySelectorAll('.seg-toggle button').forEach(function (b) {
+    b.addEventListener('click', function () { mudarModo(b.dataset.modo); });
+  });
+
+  // ----- Visão anual -----
+  function renderAno() {
+    $('calTitulo').textContent = anoRef;
+    var hoje = hojeIso();
+    var html = '';
+    for (var m = 0; m < 12; m++) {
+      var inicioSemana = new Date(anoRef, m, 1).getDay();
+      var diasNoMes = new Date(anoRef, m + 1, 0).getDate();
+      var prefixoMes = isoData(anoRef, m, 1).slice(0, 7);
+      var qtdMes = atividades.filter(function (a) { return ehData(a.data) && a.data.slice(0, 7) === prefixoMes; }).length;
+      var temHoje = hoje.slice(0, 7) === prefixoMes;
+      var celulas = '';
+      for (var i = 0; i < inicioSemana; i++) celulas += '<div class="mini-dia vazia"></div>';
+      for (var d = 1; d <= diasNoMes; d++) {
+        var iso = isoData(anoRef, m, d);
+        var doDia = atividadesDoDia(iso);
+        var cats = {};
+        doDia.forEach(function (a) { cats[a.categoria] = corCategoria(a.categoria); });
+        var cores = Object.keys(cats).map(function (k) { return cats[k]; }).slice(0, 3);
+        var pontos = cores.map(function (c) { return '<span class="mini-ponto" style="background:' + c + '"></span>'; }).join('');
+        celulas += '<div class="mini-dia' + (iso === hoje ? ' hoje' : '') + '" data-dia="' + iso + '">' +
+          d + '<span class="mini-pontos">' + pontos + '</span></div>';
+      }
+      html += '<div class="mini-mes' + (temHoje ? ' tem-hoje' : '') + '" data-mes="' + m + '">' +
+        '<h4 data-mes="' + m + '">' + cap(MESES[m]) + '<span class="cont">' + (qtdMes || '') + '</span></h4>' +
+        '<div class="mini-semana"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>' +
+        '<div class="mini-dias">' + celulas + '</div></div>';
+    }
+    $('vistaAno').innerHTML = html;
+  }
+
+  $('vistaAno').addEventListener('click', function (e) {
+    var dia = e.target.closest('.mini-dia[data-dia]');
+    if (dia) {
+      var iso = dia.dataset.dia;
+      var p = iso.split('-');
+      calRef = new Date(Number(p[0]), Number(p[1]) - 1, 1);
+      mudarModo('mes');
+      abrirDrawer(iso);
+      return;
+    }
+    var titulo = e.target.closest('h4[data-mes]');
+    if (titulo) { calRef = new Date(anoRef, Number(titulo.dataset.mes), 1); mudarModo('mes'); }
+  });
+
+  // ----- Visão mensal -----
+  function renderCalendario() {
+    anoRef = calRef.getFullYear();
+    $('calTitulo').textContent = cap(MESES[calRef.getMonth()]) + ' de ' + calRef.getFullYear();
+    var ano = calRef.getFullYear(), mes = calRef.getMonth();
+    var inicio = new Date(ano, mes, 1 - new Date(ano, mes, 1).getDay());
+    var hoje = hojeIso();
+    var html = '';
+    for (var i = 0; i < 42; i++) {
+      var d = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + i);
+      var iso = isoData(d.getFullYear(), d.getMonth(), d.getDate());
+      var fora = d.getMonth() !== mes ? ' fora' : '';
+      var eHoje = iso === hoje ? ' hoje' : '';
+      var doDia = atividadesDoDia(iso);
+      var chips = doDia.slice(0, 3).map(function (a) {
+        var cor = corCategoria(a.categoria);
+        return '<div class="cal-chip' + (a.concluida ? ' feito' : '') + '" style="border-left-color:' + cor +
+          ';background:' + rgba(cor, 0.14) + ';color:' + cor + '">' +
+          (a.inicio ? escapar(a.inicio) + ' ' : '') + escapar(a.titulo) + '</div>';
+      }).join('');
+      var mais = doDia.length > 3 ? '<div class="cal-mais">+' + (doDia.length - 3) + ' mais</div>' : '';
+      html += '<div class="cal-dia' + fora + eHoje + '" data-dia="' + iso + '" data-qtd="' +
+        (doDia.length ? doDia.length + ' ●' : '') + '">' +
+        '<span class="cal-num">' + d.getDate() + '</span>' + chips + mais + '</div>';
+    }
+    $('calGrade').innerHTML = html;
+  }
+
+  $('calGrade').addEventListener('click', function (e) {
+    var cel = e.target.closest('.cal-dia');
+    if (cel) abrirDrawer(cel.dataset.dia);
+  });
+
+  // ----- Navegação -----
+  $('anoAnterior').addEventListener('click', function () { anoRef--; renderAno(); });
+  $('anoProximo').addEventListener('click', function () { anoRef++; renderAno(); });
+  $('mesAnterior').addEventListener('click', function () { calRef = new Date(calRef.getFullYear(), calRef.getMonth() - 1, 1); renderCalendario(); });
+  $('mesProximo').addEventListener('click', function () { calRef = new Date(calRef.getFullYear(), calRef.getMonth() + 1, 1); renderCalendario(); });
+  $('calHoje').addEventListener('click', function () {
+    var agora = new Date();
+    anoRef = agora.getFullYear(); calRef = agora; renderPlanner();
+  });
+  $('calNova').addEventListener('click', function () { abrirFormAtividade(null, hojeIso()); });
+
+  // ----- Drawer do dia -----
+  function abrirDrawer(iso) {
+    diaAberto = iso;
+    renderDrawer();
+    $('drawerDia').classList.add('aberto');
+    $('drawerFundo').classList.add('aberto');
+  }
+  function fecharDrawer() {
+    $('drawerDia').classList.remove('aberto');
+    $('drawerFundo').classList.remove('aberto');
+    diaAberto = null;
+  }
+  function renderDrawer() {
+    if (!diaAberto) return;
+    var p = diaAberto.split('-');
+    $('drawerDiaTxt').textContent = Number(p[2]) + ' de ' + cap(MESES[Number(p[1]) - 1]);
+    $('drawerDiaSub').textContent = DIAS_SEMANA[new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getDay()];
+    var lista = atividadesDoDia(diaAberto);
+    if (!lista.length) {
+      $('drawerCorpo').innerHTML = '<div class="drawer-vazio">Nenhuma atividade neste dia.<br>Adicione a primeira abaixo.</div>';
+      return;
+    }
+    $('drawerCorpo').innerHTML = lista.map(function (a) {
+      var cor = corCategoria(a.categoria);
+      var hora = a.inicio ? (escapar(a.inicio) + (a.fim ? '–' + escapar(a.fim) : '')) : 'Sem horário';
+      return '<div class="ativ-card' + (a.concluida ? ' feita' : '') + '" style="border-left-color:' + cor + '">' +
+        '<div class="linha1">' +
+          '<span class="titulo">' + escapar(a.titulo) + '</span>' +
+          '<span class="cat-tag" style="background:' + rgba(cor, 0.16) + ';color:' + cor + '">' + escapar(a.categoria) + '</span>' +
+        '</div>' +
+        '<div class="hora">🕐 ' + hora + '</div>' +
+        (a.descricao ? '<div class="desc">' + escapar(a.descricao) + '</div>' : '') +
+        '<div class="acoes">' +
+          '<button title="' + (a.concluida ? 'Reabrir' : 'Concluir') + '" data-feito="' + a.linha + '">' + (a.concluida ? '↩️' : '✅') + '</button>' +
+          '<button title="Editar" data-edit-ativ="' + a.linha + '">✏️</button>' +
+          '<button title="Excluir" data-del-ativ="' + a.linha + '">🗑️</button>' +
+        '</div></div>';
+    }).join('');
+  }
+  $('drawerFechar').addEventListener('click', fecharDrawer);
+  $('drawerFundo').addEventListener('click', fecharDrawer);
+  $('drawerNova').addEventListener('click', function () { abrirFormAtividade(null, diaAberto || hojeIso()); });
+
+  $('drawerCorpo').addEventListener('click', function (e) {
+    var bE = e.target.closest('[data-edit-ativ]');
+    if (bE) { var a = atividades.filter(function (x) { return x.linha == bE.dataset.editAtiv; })[0]; if (a) abrirFormAtividade(a); return; }
+    var bF = e.target.closest('[data-feito]');
+    if (bF) {
+      var at = atividades.filter(function (x) { return x.linha == bF.dataset.feito; })[0];
+      chamarFn('alternarConcluidaAtividade', [Number(bF.dataset.feito), at ? !at.concluida : true], aplicarPlanner);
+      return;
+    }
+    var bD = e.target.closest('[data-del-ativ]');
+    if (bD && confirm('Excluir esta atividade?')) chamarFn('excluirAtividade', [Number(bD.dataset.delAtiv)], aplicarPlanner, 'Atividade excluída.');
+  });
+
+  // ----- Formulário de atividade -----
+  function abrirFormAtividade(a, dataPadrao) {
+    $('aCategoria').innerHTML = CATEGORIAS_PLANNER.map(function (c) { return '<option value="' + escapar(c.nome) + '">' + escapar(c.nome) + '</option>'; }).join('');
+    $('tituloAtividade').textContent = a ? 'Editar atividade' : 'Nova atividade';
+    $('aLinha').value = a ? a.linha : '';
+    $('aTitulo').value = a ? a.titulo : '';
+    $('aData').value = a ? (ehData(a.data) ? a.data : dataPadrao) : (dataPadrao || hojeIso());
+    $('aCategoria').value = a ? a.categoria : 'Geral';
+    $('aInicio').value = a && a.inicio ? a.inicio : '';
+    $('aFim').value = a && a.fim ? a.fim : '';
+    $('aDescricao').value = a ? a.descricao : '';
+    $('btnExcluirAtiv').style.display = a ? '' : 'none';
+    $('btnExcluirAtiv').dataset.linha = a ? a.linha : '';
+    $('fundoAtividade').classList.add('aberto');
+    $('aTitulo').focus();
+  }
+  function fecharFormAtividade() { $('fundoAtividade').classList.remove('aberto'); }
+
+  $('btnCancelarAtiv').addEventListener('click', fecharFormAtividade);
+  $('fundoAtividade').addEventListener('click', function (e) { if (e.target === this) fecharFormAtividade(); });
+  $('btnExcluirAtiv').addEventListener('click', function () {
+    var linha = this.dataset.linha;
+    if (linha && confirm('Excluir esta atividade?')) { fecharFormAtividade(); chamarFn('excluirAtividade', [Number(linha)], aplicarPlanner, 'Atividade excluída.'); }
+  });
+  $('formAtividade').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var a = {
+      linha: $('aLinha').value || null,
+      titulo: $('aTitulo').value.trim(),
+      data: $('aData').value,
+      categoria: $('aCategoria').value,
+      inicio: $('aInicio').value || '',
+      fim: $('aFim').value || '',
+      descricao: $('aDescricao').value.trim()
+    };
+    if (!a.titulo || !a.data) { toast('Informe título e data.', true); return; }
+    fecharFormAtividade();
+    chamarFn('salvarAtividade', [a], function (r) {
+      atividades = r.atividades || [];
+      var p = a.data.split('-');
+      anoRef = Number(p[0]);
+      calRef = new Date(Number(p[0]), Number(p[1]) - 1, 1);
+      renderPlanner();
+      if (diaAberto) renderDrawer();
+    }, a.linha ? 'Atividade atualizada.' : 'Atividade criada.');
+  });
+</script>

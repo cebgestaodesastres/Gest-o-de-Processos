@@ -1,0 +1,142 @@
+<!-- ===================== Banco de Skills ===================== -->
+<section class="view" id="view-skills">
+  <div class="skills-wrap">
+    <div class="skills-topo">
+      <div>
+        <h1>Banco de Skills</h1>
+        <div class="sub" id="skillsSub">Envie um arquivo para começar.</div>
+      </div>
+    </div>
+    <div class="dropzone" id="dropzone">
+      <div class="icone">⬆️</div>
+      <div>Arraste um arquivo aqui ou <strong>clique para selecionar</strong></div>
+      <div class="dica">Aceita <strong>.md</strong> (ou <strong>SKILL.md</strong>) e <strong>.zip</strong> de skills do Claude. Nome e descrição são capturados automaticamente.</div>
+      <input type="file" id="skillFile" accept=".md,.markdown,.txt,.zip" multiple style="display:none">
+    </div>
+    <div class="skills-grade" id="skillsGrade"></div>
+  </div>
+</section>
+
+<!-- Modal de detalhe da skill -->
+<div class="fundo-modal" id="fundoSkill">
+  <div class="modal largo">
+    <h2 id="skillModalTitulo">Skill</h2>
+    <div class="grade" style="margin-bottom:14px">
+      <div class="campo largura-total">
+        <label for="skNome">Nome</label>
+        <input id="skNome">
+      </div>
+      <div class="campo largura-total">
+        <label for="skDescricao">Descrição</label>
+        <textarea id="skDescricao"></textarea>
+      </div>
+      <div class="campo largura-total">
+        <label>Conteúdo</label>
+        <div class="conteudo-skill" id="skConteudo"></div>
+      </div>
+    </div>
+    <input type="hidden" id="skLinha">
+    <div class="rodape">
+      <button type="button" class="btn perigo" id="btnExcluirSkill" style="margin-right:auto">Excluir</button>
+      <button type="button" class="btn" id="btnFecharSkill">Fechar</button>
+      <button type="button" class="btn primario" id="btnSalvarSkill">Salvar alterações</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ===================== Banco de Skills ===================== */
+  var skills = [];
+  var skillsCarregadas = false;
+
+  function carregarSkills() {
+    chamarFn('obterSkills', [], function (r) { skills = r.skills || []; skillsCarregadas = true; renderSkills(); });
+  }
+  function aplicarSkills(r) { skills = r.skills || []; renderSkills(); }
+
+  function renderSkills() {
+    $('skillsSub').textContent = skills.length
+      ? skills.length + (skills.length === 1 ? ' skill cadastrada.' : ' skills cadastradas.')
+      : 'Envie um arquivo para começar.';
+    if (!skills.length) {
+      $('skillsGrade').innerHTML = '<div class="skills-vazio">Nenhuma skill ainda. Arraste um arquivo .md ou .zip acima.</div>';
+      return;
+    }
+    $('skillsGrade').innerHTML = skills.map(function (s) {
+      return '<div class="skill-card" data-skill="' + s.linha + '">' +
+        '<div class="cab"><div class="icone">🧩</div><div class="nome">' + escapar(s.nome) + '</div></div>' +
+        '<div class="descricao">' + escapar(s.descricao) + '</div>' +
+        '<div class="rodape">' +
+          '<span class="arq" title="' + escapar(s.arquivo) + '">' + escapar(s.arquivo || '') + '</span>' +
+          '<span class="acoes">' +
+            '<button title="Ver detalhes" data-ver="' + s.linha + '">🔍</button>' +
+            '<button title="Excluir" data-del-skill="' + s.linha + '">🗑️</button>' +
+          '</span>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  $('skillsGrade').addEventListener('click', function (e) {
+    var bD = e.target.closest('[data-del-skill]');
+    if (bD) { if (confirm('Excluir esta skill?')) chamarFn('excluirSkill', [Number(bD.dataset.delSkill)], aplicarSkills, 'Skill excluída.'); return; }
+    var card = e.target.closest('[data-skill]');
+    if (card) abrirSkill(card.dataset.skill);
+  });
+
+  // ----- Upload -----
+  var dz = $('dropzone');
+  dz.addEventListener('click', function (e) { if (e.target.id === 'skillFile') return; $('skillFile').click(); });
+  dz.addEventListener('dragover', function (e) { e.preventDefault(); dz.classList.add('arrastando'); });
+  dz.addEventListener('dragleave', function () { dz.classList.remove('arrastando'); });
+  dz.addEventListener('drop', function (e) {
+    e.preventDefault(); dz.classList.remove('arrastando');
+    if (e.dataTransfer.files.length) enviarArquivos(e.dataTransfer.files);
+  });
+  $('skillFile').addEventListener('change', function () {
+    if (this.files.length) enviarArquivos(this.files);
+    this.value = '';
+  });
+
+  function enviarArquivos(fileList) {
+    var arquivos = Array.prototype.slice.call(fileList);
+    (function proximo(i) {
+      if (i >= arquivos.length) return;
+      var f = arquivos[i];
+      var tipo = /\.zip$/i.test(f.name) ? 'zip' : 'md';
+      var leitor = new FileReader();
+      leitor.onload = function () {
+        var base64 = String(leitor.result).split(',')[1] || '';
+        chamarFn('salvarSkillArquivo', [{ arquivo: f.name, tipo: tipo, base64: base64 }], function (r) {
+          aplicarSkills(r);
+          proximo(i + 1);
+        }, 'Skill "' + f.name + '" adicionada.');
+      };
+      leitor.onerror = function () { toast('Falha ao ler ' + f.name, true); proximo(i + 1); };
+      leitor.readAsDataURL(f);
+    })(0);
+  }
+
+  // ----- Detalhe / edição -----
+  function abrirSkill(linha) {
+    var s = skills.filter(function (x) { return x.linha == linha; })[0];
+    if (!s) return;
+    $('skLinha').value = s.linha;
+    $('skillModalTitulo').textContent = s.nome;
+    $('skNome').value = s.nome;
+    $('skDescricao').value = s.descricao;
+    $('skConteudo').textContent = s.conteudo || '(sem conteúdo capturado)';
+    $('fundoSkill').classList.add('aberto');
+  }
+  function fecharSkill() { $('fundoSkill').classList.remove('aberto'); }
+  $('btnFecharSkill').addEventListener('click', fecharSkill);
+  $('fundoSkill').addEventListener('click', function (e) { if (e.target === this) fecharSkill(); });
+  $('btnSalvarSkill').addEventListener('click', function () {
+    var linha = $('skLinha').value;
+    fecharSkill();
+    chamarFn('atualizarSkill', [Number(linha), $('skNome').value.trim(), $('skDescricao').value.trim()], aplicarSkills, 'Skill atualizada.');
+  });
+  $('btnExcluirSkill').addEventListener('click', function () {
+    var linha = $('skLinha').value;
+    if (confirm('Excluir esta skill?')) { fecharSkill(); chamarFn('excluirSkill', [Number(linha)], aplicarSkills, 'Skill excluída.'); }
+  });
+</script>

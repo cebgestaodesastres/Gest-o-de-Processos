@@ -63,6 +63,15 @@ function doGet() {
 }
 
 /**
+ * Inclui o conteúdo de outro arquivo HTML dentro do template principal.
+ * Usado em Index.html via <?!= include('Gestao'); ?> para manter cada aba
+ * (Gestao, Planner, Skills) em seu próprio arquivo.
+ */
+function include(nome) {
+  return HtmlService.createHtmlOutputFromFile(nome).getContent();
+}
+
+/**
  * Retorna a planilha de dados, criando e semeando na primeira execução.
  * Ordem de resolução:
  *   1) SPREADSHEET_ID salvo nas propriedades do script (planilha externa);
