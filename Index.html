@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<base target="_top">
+<style>
+  :root {
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #232322;
+    --surface-3: #2c2c2a;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --hairline: rgba(255, 255, 255, 0.10);
+    --accent: #3987e5;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+    --violet: #9085e9;
+    --aqua: #199e70;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 1480px; margin: 0 auto; padding: 24px 20px 48px; }
+
+  /* ---------- Topo ---------- */
+  .topo { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .topo h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  .topo .sub { color: var(--muted); font-size: 13px; }
+  .topo .acoes { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  a.link-planilha { color: var(--ink-2); font-size: 13px; text-decoration: none; border-bottom: 1px dotted var(--muted); }
+  a.link-planilha:hover { color: var(--ink); }
+
+  .btn {
+    border: 1px solid var(--hairline); background: var(--surface-2); color: var(--ink);
+    padding: 8px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+    cursor: pointer; transition: background .12s ease;
+  }
+  .btn:hover { background: var(--surface-3); }
+  .btn.primario { background: var(--accent); border-color: transparent; }
+  .btn.primario:hover { filter: brightness(1.1); }
+  .btn.perigo { color: #f0a0a0; }
+  .btn.perigo:hover { background: rgba(208, 59, 59, 0.18); }
+
+  /* ---------- Cards de resumo ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 14px 16px; cursor: default;
+  }
+  .tile.clicavel { cursor: pointer; transition: border-color .12s ease, background .12s ease; }
+  .tile.clicavel:hover { background: var(--surface-2); }
+  .tile.ativo { border-color: var(--accent); }
+  .tile .rotulo { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: 6px; }
+  .tile .valor { font-size: 28px; font-weight: 700; margin-top: 4px; }
+  .ponto { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+
+  /* ---------- Filtros ---------- */
+  .filtros {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: end;
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 16px;
+  }
+  .campo { display: flex; flex-direction: column; gap: 5px; }
+  .campo.crescer { flex: 1 1 220px; }
+  .campo label { color: var(--muted); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  input, select, textarea {
+    background: var(--surface-2); border: 1px solid var(--hairline); color: var(--ink);
+    border-radius: 8px; padding: 8px 10px; font-size: 13.5px; font-family: inherit; min-height: 36px;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+  input[type="date"] { color-scheme: dark; }
+
+  /* ---------- Tabela ---------- */
+  .painel { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; overflow: hidden; }
+  .painel-topo { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--hairline); color: var(--ink-2); font-size: 13px; }
+  .rolagem { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 760px; table-layout: fixed; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  th {
+    color: var(--muted); font-size: 11.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .04em; cursor: pointer; user-select: none; line-height: 1.3;
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+  }
+  th:hover { color: var(--ink-2); }
+  tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td .proc { font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  td .desc { color: var(--ink); overflow-wrap: anywhere; }
+  td .obs { color: var(--ink-2); font-size: 13px; overflow-wrap: anywhere; }
+  .vazio { padding: 40px; text-align: center; color: var(--muted); }
+
+  /* Larguras das colunas (table-layout: fixed).
+     Descrição e Obs ficam sem largura fixa e dividem o espaço restante. */
+  col.c-processo { width: 150px; }
+  col.c-status { width: 172px; }
+  col.c-dataStatus { width: 112px; }
+  col.c-prazo { width: 178px; }
+  col.c-linksRelacionados { width: 150px; }
+  col.c-acoes { width: 122px; }
+
+  /* Coluna de ações fixada à direita — sempre visível, sem rolar */
+  th.acoes-col, td.acoes-col {
+    position: sticky; right: 0; background: var(--surface); z-index: 2;
+    box-shadow: -10px 0 10px -8px rgba(0, 0, 0, 0.55); white-space: nowrap;
+  }
+  th.acoes-col { z-index: 3; }
+  tbody tr:hover td.acoes-col { background: #1f1f1e; }
+
+  /* ---------- Links ---------- */
+  a.link-ext { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(57, 135, 229, 0.35); }
+  a.link-ext:hover { border-bottom-color: var(--accent); }
+  td .proc a.link-ext { color: var(--accent); }
+  .links-rel { display: flex; flex-direction: column; gap: 4px; }
+  .links-rel a.link-ext {
+    display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; font-size: 13px;
+  }
+  .links-sem { color: var(--muted); }
+
+  /* ---------- Abas (ativos / arquivados) ---------- */
+  .abas { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--hairline); }
+  .aba {
+    background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted);
+    padding: 9px 14px; font-size: 13.5px; font-weight: 600; cursor: pointer; margin-bottom: -1px;
+  }
+  .aba:hover { color: var(--ink-2); }
+  .aba.ativa { color: var(--ink); border-bottom-color: var(--accent); }
+  .aba .contador {
+    display: inline-block; margin-left: 6px; background: var(--surface-3); color: var(--ink-2);
+    border-radius: 999px; padding: 1px 7px; font-size: 11.5px;
+  }
+
+  /* status como select estilizado de badge */
+  select.badge {
+    appearance: none; -webkit-appearance: none; border-radius: 999px; font-weight: 600;
+    font-size: 12.5px; padding: 3px 22px 3px 12px; min-height: 0; cursor: pointer;
+    max-width: 100%;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='6'><path d='M0 0l4 6 4-6z' fill='%23898781'/></svg>");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+
+  .prazo-badge { display: inline-block; max-width: 100%; border-radius: 6px; padding: 2px 8px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prazo-vencido { background: rgba(208, 59, 59, 0.18); color: #ef8a8a; }
+  .prazo-proximo { background: rgba(250, 178, 25, 0.16); color: var(--warning); }
+  .prazo-normal { color: var(--ink-2); }
+  .prazo-sem { color: var(--muted); }
+
+  .acao { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 4px 5px; border-radius: 6px; }
+  td.acoes-col { padding-left: 8px; padding-right: 8px; }
+  .acao:hover { color: var(--ink); background: var(--surface-3); }
+  .acao.excluir:hover { color: #ef8a8a; background: rgba(208, 59, 59, 0.15); }
+
+  /* ---------- Modal ---------- */
+  .fundo-modal {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: none;
+    align-items: flex-start; justify-content: center; padding: 5vh 16px; z-index: 50;
+  }
+  .fundo-modal.aberto { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
+    width: 100%; max-width: 620px; padding: 22px; max-height: 90vh; overflow-y: auto;
+  }
+  .modal h2 { font-size: 16px; margin-bottom: 16px; }
+  .modal .grade { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal .grade .largura-total { grid-column: 1 / -1; }
+  .modal textarea { resize: vertical; min-height: 64px; }
+  .modal .rodape { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  .dica { color: var(--muted); font-size: 11.5px; }
+  .modal.confirmar { max-width: 420px; }
+  .modal.confirmar p { color: var(--ink-2); margin-bottom: 4px; }
+
+  /* ---------- Toast / carregando ---------- */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--surface-3); border: 1px solid var(--hairline); color: var(--ink);
+    padding: 10px 18px; border-radius: 10px; font-size: 13.5px; opacity: 0;
+    transition: all .25s ease; z-index: 100; pointer-events: none;
+  }
+  #toast.mostrar { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.erro { border-color: var(--critical); }
+
+  #carregando {
+    position: fixed; inset: 0; background: rgba(13, 13, 13, 0.65); z-index: 90;
+    display: none; align-items: center; justify-content: center; color: var(--ink-2); gap: 10px;
+  }
+  #carregando.ativo { display: flex; }
+  .girar { width: 18px; height: 18px; border: 2px solid var(--hairline); border-top-color: var(--accent); border-radius: 50%; animation: girar .8s linear infinite; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+
+  /* ---------- Telas sem espaço para a tabela cheia: vira cartões ----------
+     A tabela tem 6 colunas de largura fixa (~884px) + Descrição/Obs, que
+     precisam de espaço extra para não serem espremidas. Abaixo de ~1300px
+     (bem menor que uma janela cheia, cobre janelas "meio de tela" também)
+     usamos cartões em vez de arriscar colunas de texto quebradas letra a
+     letra. */
+  @media (max-width: 1300px) {
+    .wrap { padding: 16px 12px 40px; }
+    .painel { border-radius: 12px; }
+    .painel-topo { padding: 10px 14px; }
+    .rolagem { overflow-x: visible; }
+    table { min-width: 0; width: 100%; table-layout: auto; }
+    table colgroup, thead { display: none; }
+    tbody, tr, td { display: block; width: auto; }
+    tbody { padding: 10px 12px; }
+    tr {
+      border: 1px solid var(--hairline); border-radius: 12px; background: var(--surface-2);
+      padding: 12px 14px; margin-bottom: 12px;
+    }
+    tbody tr:last-child td { border-bottom: 1px solid var(--hairline); }
+    td {
+      border: none; border-bottom: 1px solid var(--hairline);
+      padding: 8px 0; display: flex; flex-direction: column; gap: 4px;
+    }
+    tr td:last-child { border-bottom: none; padding-bottom: 0; }
+    tr td:first-child { padding-top: 0; }
+    td[data-rotulo]::before {
+      content: attr(data-rotulo);
+      color: var(--muted); font-size: 10.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+    /* Célula de ações: rótulo e botões lado a lado, coluna não mais fixa */
+    td.acoes-col {
+      position: static; box-shadow: none; background: none;
+      flex-direction: row; gap: 8px; padding-top: 12px;
+    }
+    td.acoes-col .acao { font-size: 20px; padding: 6px 10px; border: 1px solid var(--hairline); }
+    /* Elementos que não devem esticar/ficar recortados dentro do cartão */
+    select.badge { max-width: none; width: max-content; }
+    .prazo-badge { max-width: none; }
+    .links-rel a.link-ext { max-width: 100%; }
+    td .proc, td .desc, td .obs { overflow-wrap: anywhere; word-break: break-word; }
+    .vazio { padding: 28px 12px; }
+  }
+
+  @media (max-width: 640px) {
+    .modal .grade { grid-template-columns: 1fr; }
+    .topo { justify-content: space-between; }
+    .topo .acoes { margin-left: 0; width: 100%; }
+    .abas { overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="topo">
+    <div>
+      <h1>Controle de Processos</h1>
+      <div class="sub" id="subtitulo">Carregando…</div>
+    </div>
+    <div class="acoes">
+      <a class="link-planilha" id="linkPlanilha" href="#" target="_blank" rel="noopener" style="display:none">Abrir planilha ↗</a>
+      <button class="btn primario" id="btnNovo">+ Novo processo</button>
+    </div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="filtros">
+    <div class="campo crescer">
+      <label for="fBusca">Buscar</label>
+      <input type="search" id="fBusca" placeholder="Processo, descrição ou observações…">
+    </div>
+    <div class="campo">
+      <label for="fStatus">Status</label>
+      <select id="fStatus"><option value="">Todos</option></select>
+    </div>
+    <div class="campo">
+      <label for="fDe">Mudança de status — de</label>
+      <input type="date" id="fDe">
+    </div>
+    <div class="campo">
+      <label for="fAte">Até</label>
+      <input type="date" id="fAte">
+    </div>
+    <div class="campo">
+      <label>&nbsp;</label>
+      <button class="btn" id="btnLimpar">Limpar filtros</button>
+    </div>
+  </div>
+
+  <div class="abas" id="abas">
+    <button class="aba ativa" data-aba="ativos">Ativos<span class="contador" id="contAtivos">0</span></button>
+    <button class="aba" data-aba="arquivados">Arquivados<span class="contador" id="contArquivados">0</span></button>
+  </div>
+
+  <div class="painel">
+    <div class="painel-topo"><span id="contagem"></span></div>
+    <div class="rolagem">
+      <table>
+        <colgroup>
+          <col class="c-processo">
+          <col class="c-descricao">
+          <col class="c-status">
+          <col class="c-dataStatus">
+          <col class="c-prazo">
+          <col class="c-obs">
+          <col class="c-linksRelacionados">
+          <col class="c-acoes">
+        </colgroup>
+        <thead>
+          <tr>
+            <th data-col="processo">Processo</th>
+            <th data-col="descricao">Descrição</th>
+            <th data-col="status">Status</th>
+            <th data-col="dataStatus">Mudança de status</th>
+            <th data-col="prazo">Prazo</th>
+            <th data-col="obs">Obs</th>
+            <th data-col="linksRelacionados">Links relacionados</th>
+            <th class="acoes-col"></th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabela"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de cadastro/edição -->
+<div class="fundo-modal" id="fundoForm">
+  <div class="modal">
+    <h2 id="tituloForm">Novo processo</h2>
+    <form id="formProcesso">
+      <input type="hidden" id="cLinha">
+      <div class="grade">
+        <div class="campo">
+          <label for="cProcesso">Processo (nº ou identificador)</label>
+          <input id="cProcesso" placeholder="1400.01.0000000/2026-00">
+        </div>
+        <div class="campo">
+          <label for="cStatus">Status</label>
+          <select id="cStatus" required></select>
+        </div>
+        <div class="campo largura-total">
+          <label for="cLink">Link do processo (SEI)</label>
+          <input id="cLink" placeholder="https://sei.mg.gov.br/...">
+          <span class="dica">Cole o endereço do SEI. O nº do processo vira um link clicável.</span>
+        </div>
+        <div class="campo largura-total">
+          <label for="cDescricao">Descrição</label>
+          <textarea id="cDescricao" required></textarea>
+        </div>
+        <div class="campo">
+          <label for="cDataStatus">Data de mudança de status</label>
+          <input type="date" id="cDataStatus" required>
+          <span class="dica">Atualizada para hoje ao trocar o status.</span>
+        </div>
+        <div class="campo">
+          <label for="cPrazo">Prazo</label>
+          <input type="date" id="cPrazo">
+          <span class="dica">Deixe vazio se não houver prazo.</span>
+        </div>
+        <div class="campo largura-total">
+          <label for="cLinksRelacionados">Links relacionados</label>
+          <textarea id="cLinksRelacionados" placeholder="https://exemplo.com&#10;Rótulo | https://outro.com"></textarea>
+          <span class="dica">Um link por linha. Opcional: "Rótulo | https://endereço".</span>
+        </div>
+        <div class="campo largura-total">
+          <label for="cObs">Observações</label>
+          <textarea id="cObs"></textarea>
+        </div>
+      </div>
+      <div class="rodape">
+        <button type="button" class="btn perigo" id="btnExcluirForm" style="margin-right:auto;display:none">Excluir</button>
+        <button type="button" class="btn" id="btnArquivarForm" style="display:none">Arquivar</button>
+        <button type="button" class="btn" id="btnCancelar">Cancelar</button>
+        <button type="submit" class="btn primario" id="btnSalvar">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de confirmação de exclusão -->
+<div class="fundo-modal" id="fundoConfirmar">
+  <div class="modal confirmar">
+    <h2>Excluir processo</h2>
+    <p id="textoConfirmar"></p>
+    <div class="rodape">
+      <button type="button" class="btn" id="btnVoltarEdicao">Voltar à edição</button>
+      <button type="button" class="btn" id="btnConfirmarNao">Cancelar</button>
+      <button type="button" class="btn perigo" id="btnConfirmarSim">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="carregando"><div class="girar"></div><span>Processando…</span></div>
+
+<script>
+  var dados = [];
+  var urlPlanilha = '';
+  var ordenacao = { col: 'dataStatus', dir: 'desc' };
+  var linhaParaExcluir = null;
+  var abaAtual = 'ativos';
+  var DIAS_ALERTA_PRAZO = 2;
+  var STATUS_PADRAO = ['Em Andamento', 'Concluído', 'Consulta', 'Não iniciado'];
+
+  // Paleta de status (cores validadas para superfície escura)
+  var CORES_STATUS = {
+    'Em Andamento': '#3987e5',
+    'Consulta': '#9085e9',
+    'Não iniciado': '#898781',
+    'Concluído': '#0ca30c'
+  };
+  var COR_STATUS_PADRAO = '#199e70';
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function escapar(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function ehData(v) { return /^\d{4}-\d{2}-\d{2}$/.test(v || ''); }
+
+  function formatarData(iso) {
+    if (!ehData(iso)) return iso || '-';
+    var p = iso.split('-');
+    return p[2] + '/' + p[1] + '/' + p[0];
+  }
+
+  function hojeIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function diasAte(iso) {
+    if (!ehData(iso)) return null;
+    var hoje = hojeIso().split('-'), alvo = iso.split('-');
+    var a = new Date(Number(hoje[0]), Number(hoje[1]) - 1, Number(hoje[2]));
+    var b = new Date(Number(alvo[0]), Number(alvo[1]) - 1, Number(alvo[2]));
+    return Math.round((b - a) / 86400000);
+  }
+
+  function corDoStatus(s) { return CORES_STATUS[s] || COR_STATUS_PADRAO; }
+
+  function rgba(hex, alfa) {
+    var n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alfa + ')';
+  }
+
+  function statusConhecidos() {
+    var lista = STATUS_PADRAO.slice();
+    Object.keys(CORES_STATUS).forEach(function (s) { if (lista.indexOf(s) === -1) lista.push(s); });
+    dados.forEach(function (p) { if (p.status && lista.indexOf(p.status) === -1) lista.push(p.status); });
+    return lista;
+  }
+
+  // ---------- Links ----------
+  function ehUrl(s) { return /^(https?:\/\/|www\.)\S+$/i.test(String(s == null ? '' : s).trim()); }
+
+  function normalizarUrl(s) {
+    s = String(s == null ? '' : s).trim();
+    return /^www\./i.test(s) ? 'https://' + s : s;
+  }
+
+  function rotuloUrl(url) {
+    var m = String(url).replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+    return m.length > 40 ? m.slice(0, 39) + '…' : m;
+  }
+
+  function ancora(url, texto) {
+    return '<a class="link-ext" href="' + escapar(normalizarUrl(url)) + '" target="_blank" rel="noopener" title="' +
+      escapar(normalizarUrl(url)) + '">' + escapar(texto) + '</a>';
+  }
+
+  function celulaProcesso(p) {
+    var texto = p.processo || '-';
+    var url = ehUrl(p.link) ? p.link : (ehUrl(p.processo) ? p.processo : '');
+    if (url) return '<span class="proc">' + ancora(url, texto) + '</span>';
+    return '<span class="proc">' + escapar(texto) + '</span>';
+  }
+
+  function celulaLinks(p) {
+    var bruto = (p.linksRelacionados || '').trim();
+    if (!bruto) return '<span class="links-sem">—</span>';
+    var itens = bruto.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
+    var html = itens.map(function (linha) {
+      var rotulo = linha, url = linha;
+      var barra = linha.indexOf('|');
+      if (barra !== -1) {
+        rotulo = linha.slice(0, barra).trim();
+        url = linha.slice(barra + 1).trim();
+      }
+      if (!ehUrl(url)) return '<span class="obs">' + escapar(linha) + '</span>';
+      if (!rotulo || rotulo === url) rotulo = rotuloUrl(url);
+      return ancora(url, rotulo);
+    }).join('');
+    return '<div class="links-rel">' + html + '</div>';
+  }
+
+  // ---------- Chamadas ao servidor ----------
+  function carregando(ativo) { $('carregando').className = ativo ? 'ativo' : ''; }
+
+  function chamarServidor(nomeFn, args, msgSucesso) {
+    carregando(true);
+    var runner = google.script.run
+      .withSuccessHandler(function (resposta) {
+        carregando(false);
+        aplicarResposta(resposta);
+        if (msgSucesso) toast(msgSucesso);
+      })
+      .withFailureHandler(function (erro) {
+        carregando(false);
+        toast('Erro: ' + erro.message, true);
+      });
+    runner[nomeFn].apply(runner, args || []);
+  }
+
+  function aplicarResposta(resposta) {
+    dados = resposta.processos || [];
+    urlPlanilha = resposta.urlPlanilha || '';
+    if (urlPlanilha) {
+      var link = $('linkPlanilha');
+      link.href = urlPlanilha;
+      link.style.display = '';
+    }
+    preencherOpcoesStatus();
+    renderizar();
+  }
+
+  function toast(msg, erro) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.className = 'mostrar' + (erro ? ' erro' : '');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.className = ''; }, erro ? 6000 : 3000);
+  }
+
+  // ---------- Abas / filtros ----------
+  function dadosDaAba() {
+    return dados.filter(function (p) {
+      return abaAtual === 'arquivados' ? p.arquivado : !p.arquivado;
+    });
+  }
+
+  function filtrados() {
+    var busca = $('fBusca').value.trim().toLowerCase();
+    var status = $('fStatus').value;
+    var de = $('fDe').value, ate = $('fAte').value;
+    return dadosDaAba().filter(function (p) {
+      if (status && p.status !== status) return false;
+      if (de && (!ehData(p.dataStatus) || p.dataStatus < de)) return false;
+      if (ate && (!ehData(p.dataStatus) || p.dataStatus > ate)) return false;
+      if (busca) {
+        var alvo = (p.processo + ' ' + p.descricao + ' ' + p.obs + ' ' + p.status).toLowerCase();
+        if (alvo.indexOf(busca) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function preencherOpcoesStatus() {
+    var selecionado = $('fStatus').value;
+    var opcoes = '<option value="">Todos</option>';
+    var opcoesForm = '';
+    statusConhecidos().forEach(function (s) {
+      opcoes += '<option value="' + escapar(s) + '">' + escapar(s) + '</option>';
+      opcoesForm += '<option value="' + escapar(s) + '">' + escapar(s) + '</option>';
+    });
+    $('fStatus').innerHTML = opcoes;
+    $('fStatus').value = selecionado;
+    var selForm = $('cStatus');
+    var valForm = selForm.value;
+    selForm.innerHTML = opcoesForm;
+    if (valForm) selForm.value = valForm;
+  }
+
+  // ---------- Renderização ----------
+  function renderizar() {
+    atualizarAbas();
+    renderizarTiles();
+    renderizarTabela();
+  }
+
+  function atualizarAbas() {
+    var ativos = 0, arquivados = 0;
+    dados.forEach(function (p) { p.arquivado ? arquivados++ : ativos++; });
+    $('contAtivos').textContent = ativos;
+    $('contArquivados').textContent = arquivados;
+    document.querySelectorAll('.aba').forEach(function (b) {
+      b.classList.toggle('ativa', b.dataset.aba === abaAtual);
+    });
+  }
+
+  function renderizarTiles() {
+    var base = dadosDaAba();
+    var vencidos = 0, proximos = 0;
+    var porStatus = {};
+    base.forEach(function (p) {
+      porStatus[p.status] = (porStatus[p.status] || 0) + 1;
+      if (p.status === 'Concluído') return;
+      var dias = diasAte(p.prazo);
+      if (dias === null) return;
+      if (dias < 0) vencidos++;
+      else if (dias <= DIAS_ALERTA_PRAZO) proximos++;
+    });
+
+    var filtroAtual = $('fStatus').value;
+    var html = '<div class="tile"><div class="rotulo">Total</div><div class="valor">' + base.length + '</div></div>';
+    statusConhecidos().forEach(function (s) {
+      if (!porStatus[s]) return;
+      var ativo = filtroAtual === s ? ' ativo' : '';
+      html += '<div class="tile clicavel' + ativo + '" data-status="' + escapar(s) + '">' +
+        '<div class="rotulo"><span class="ponto" style="background:' + corDoStatus(s) + '"></span>' + escapar(s) + '</div>' +
+        '<div class="valor">' + porStatus[s] + '</div></div>';
+    });
+    html += '<div class="tile"><div class="rotulo"><span class="ponto" style="background:var(--critical)"></span>Prazo vencido</div><div class="valor">' + vencidos + '</div></div>';
+    html += '<div class="tile"><div class="rotulo"><span class="ponto" style="background:var(--warning)"></span>Vence em ' + DIAS_ALERTA_PRAZO + ' dias</div><div class="valor">' + proximos + '</div></div>';
+    $('tiles').innerHTML = html;
+  }
+
+  function celulaPrazo(p) {
+    if (!ehData(p.prazo)) return '<span class="prazo-sem">—</span>';
+    var texto = formatarData(p.prazo);
+    if (p.status !== 'Concluído') {
+      var dias = diasAte(p.prazo);
+      if (dias < 0) return '<span class="prazo-badge prazo-vencido">' + texto + ' · vencido</span>';
+      if (dias <= DIAS_ALERTA_PRAZO) {
+        var rotulo = dias === 0 ? 'hoje' : (dias === 1 ? 'amanhã' : dias + ' dias');
+        return '<span class="prazo-badge prazo-proximo">' + texto + ' · ' + rotulo + '</span>';
+      }
+    }
+    return '<span class="prazo-normal">' + texto + '</span>';
+  }
+
+  function seletorStatus(p) {
+    var cor = corDoStatus(p.status);
+    var html = '<select class="badge" data-linha="' + p.linha + '" style="color:' + cor + ';background-color:' + rgba(cor, 0.14) + ';border-color:' + rgba(cor, 0.35) + '">';
+    var lista = statusConhecidos();
+    if (lista.indexOf(p.status) === -1) lista.push(p.status);
+    lista.forEach(function (s) {
+      html += '<option value="' + escapar(s) + '"' + (s === p.status ? ' selected' : '') + '>' + escapar(s) + '</option>';
+    });
+    return html + '</select>';
+  }
+
+  function renderizarTabela() {
+    var lista = filtrados();
+    var col = ordenacao.col, dir = ordenacao.dir === 'asc' ? 1 : -1;
+    lista.sort(function (a, b) {
+      var va = (a[col] || '').toLowerCase ? String(a[col] || '').toLowerCase() : a[col];
+      var vb = (b[col] || '').toLowerCase ? String(b[col] || '').toLowerCase() : b[col];
+      if (col === 'dataStatus' || col === 'prazo') {
+        va = ehData(a[col]) ? a[col] : (dir === 1 ? '9999' : '');
+        vb = ehData(b[col]) ? b[col] : (dir === 1 ? '9999' : '');
+      }
+      return va < vb ? -dir : va > vb ? dir : 0;
+    });
+
+    var totalAba = dadosDaAba().length;
+    var rotuloAba = abaAtual === 'arquivados' ? ' arquivados' : '';
+    $('contagem').textContent = lista.length === totalAba
+      ? totalAba + ' processos' + rotuloAba
+      : lista.length + ' de ' + totalAba + ' processos' + rotuloAba + ' (filtrado)';
+    $('subtitulo').textContent = 'Atualizado em ' + formatarData(hojeIso());
+
+    document.querySelectorAll('th[data-col]').forEach(function (th) {
+      th.textContent = th.textContent.replace(/ [↑↓]$/, '');
+      if (th.dataset.col === col) th.textContent += dir === 1 ? ' ↑' : ' ↓';
+    });
+
+    if (!lista.length) {
+      var vazioMsg = abaAtual === 'arquivados'
+        ? 'Nenhum processo arquivado.'
+        : 'Nenhum processo encontrado com os filtros atuais.';
+      $('corpoTabela').innerHTML = '<tr><td colspan="8" class="vazio">' + vazioMsg + '</td></tr>';
+      return;
+    }
+
+    $('corpoTabela').innerHTML = lista.map(function (p) {
+      var botaoArquivo = p.arquivado
+        ? '<button class="acao" title="Desarquivar" data-desarquivar="' + p.linha + '">📤</button>'
+        : '<button class="acao" title="Arquivar" data-arquivar="' + p.linha + '">📥</button>';
+      return '<tr>' +
+        '<td data-rotulo="Processo">' + celulaProcesso(p) + '</td>' +
+        '<td data-rotulo="Descrição"><span class="desc">' + escapar(p.descricao) + '</span></td>' +
+        '<td data-rotulo="Status">' + seletorStatus(p) + '</td>' +
+        '<td class="num" data-rotulo="Mudança de status">' + escapar(formatarData(p.dataStatus)) + '</td>' +
+        '<td data-rotulo="Prazo">' + celulaPrazo(p) + '</td>' +
+        '<td data-rotulo="Obs"><span class="obs">' + escapar(p.obs) + '</span></td>' +
+        '<td data-rotulo="Links relacionados">' + celulaLinks(p) + '</td>' +
+        '<td class="acoes-col">' +
+          '<button class="acao" title="Editar" data-editar="' + p.linha + '">✏️</button>' +
+          botaoArquivo +
+          '<button class="acao excluir" title="Excluir" data-excluir="' + p.linha + '">🗑️</button>' +
+        '</td></tr>';
+    }).join('');
+  }
+
+  // ---------- Formulário ----------
+  function abrirForm(p) {
+    preencherOpcoesStatus();
+    $('tituloForm').textContent = p ? 'Editar processo' : 'Novo processo';
+    $('cLinha').value = p ? p.linha : '';
+    $('cProcesso').value = p ? p.processo : '';
+    $('cLink').value = p ? (p.link || '') : '';
+    $('cDescricao').value = p ? p.descricao : '';
+    var status = p ? p.status : 'Em Andamento';
+    var sel = $('cStatus'), existe = false;
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === status) { existe = true; break; }
+    }
+    if (status && !existe) sel.add(new Option(status, status));
+    sel.value = status;
+    $('cStatus').dataset.original = $('cStatus').value;
+    $('cDataStatus').value = p && ehData(p.dataStatus) ? p.dataStatus : hojeIso();
+    $('cPrazo').value = p && ehData(p.prazo) ? p.prazo : '';
+    $('cLinksRelacionados').value = p ? (p.linksRelacionados || '') : '';
+    $('cObs').value = p ? p.obs : '';
+
+    var edicao = !!p;
+    $('btnExcluirForm').style.display = edicao ? '' : 'none';
+    $('btnArquivarForm').style.display = edicao ? '' : 'none';
+    $('btnArquivarForm').textContent = (p && p.arquivado) ? 'Desarquivar' : 'Arquivar';
+
+    $('fundoForm').classList.add('aberto');
+    $('cProcesso').focus();
+  }
+
+  function fecharForm() { $('fundoForm').classList.remove('aberto'); }
+
+  // ---------- Eventos ----------
+  $('btnNovo').addEventListener('click', function () { abrirForm(null); });
+  $('btnCancelar').addEventListener('click', fecharForm);
+  $('fundoForm').addEventListener('click', function (e) { if (e.target === this) fecharForm(); });
+
+  $('cStatus').addEventListener('change', function () {
+    if (this.value !== this.dataset.original) $('cDataStatus').value = hojeIso();
+  });
+
+  $('formProcesso').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var p = {
+      linha: $('cLinha').value || null,
+      processo: $('cProcesso').value.trim() || '-',
+      link: $('cLink').value.trim(),
+      descricao: $('cDescricao').value.trim(),
+      status: $('cStatus').value.trim() || 'Não iniciado',
+      dataStatus: $('cDataStatus').value,
+      prazo: $('cPrazo').value || '-',
+      linksRelacionados: $('cLinksRelacionados').value.trim(),
+      obs: $('cObs').value.trim()
+    };
+    fecharForm();
+    chamarServidor('salvarProcesso', [p], p.linha ? 'Processo atualizado.' : 'Processo criado.');
+  });
+
+  ['fBusca', 'fStatus', 'fDe', 'fAte'].forEach(function (id) {
+    $(id).addEventListener('input', renderizar);
+  });
+  $('btnLimpar').addEventListener('click', function () {
+    $('fBusca').value = ''; $('fStatus').value = ''; $('fDe').value = ''; $('fAte').value = '';
+    renderizar();
+  });
+
+  $('tiles').addEventListener('click', function (e) {
+    var tile = e.target.closest('.tile.clicavel');
+    if (!tile) return;
+    var s = tile.dataset.status;
+    $('fStatus').value = $('fStatus').value === s ? '' : s;
+    renderizar();
+  });
+
+  document.querySelector('thead').addEventListener('click', function (e) {
+    var th = e.target.closest('th[data-col]');
+    if (!th) return;
+    var col = th.dataset.col;
+    if (ordenacao.col === col) ordenacao.dir = ordenacao.dir === 'asc' ? 'desc' : 'asc';
+    else ordenacao = { col: col, dir: 'asc' };
+    renderizarTabela();
+  });
+
+  function pedirExclusao(linha) {
+    var proc = dados.find(function (x) { return x.linha == linha; });
+    linhaParaExcluir = linha;
+    $('textoConfirmar').textContent = 'Tem certeza que deseja excluir "' +
+      (proc ? (proc.processo !== '-' ? proc.processo : proc.descricao) : '') + '"? Essa ação não pode ser desfeita.';
+    $('fundoConfirmar').classList.add('aberto');
+  }
+
+  $('corpoTabela').addEventListener('click', function (e) {
+    var btnEditar = e.target.closest('[data-editar]');
+    if (btnEditar) {
+      var p = dados.find(function (x) { return x.linha == btnEditar.dataset.editar; });
+      if (p) abrirForm(p);
+      return;
+    }
+    var btnArquivar = e.target.closest('[data-arquivar]');
+    if (btnArquivar) {
+      chamarServidor('arquivarProcesso', [Number(btnArquivar.dataset.arquivar), true], 'Processo arquivado.');
+      return;
+    }
+    var btnDesarquivar = e.target.closest('[data-desarquivar]');
+    if (btnDesarquivar) {
+      chamarServidor('arquivarProcesso', [Number(btnDesarquivar.dataset.desarquivar), false], 'Processo desarquivado.');
+      return;
+    }
+    var btnExcluir = e.target.closest('[data-excluir]');
+    if (btnExcluir) {
+      pedirExclusao(btnExcluir.dataset.excluir);
+    }
+  });
+
+  $('corpoTabela').addEventListener('change', function (e) {
+    var sel = e.target.closest('select.badge');
+    if (!sel) return;
+    chamarServidor('alterarStatus', [Number(sel.dataset.linha), sel.value], 'Status atualizado.');
+  });
+
+  // Abas ativos / arquivados
+  $('abas').addEventListener('click', function (e) {
+    var aba = e.target.closest('.aba');
+    if (!aba) return;
+    abaAtual = aba.dataset.aba;
+    renderizar();
+  });
+
+  // Botões dentro do formulário de edição
+  $('btnArquivarForm').addEventListener('click', function () {
+    var linha = $('cLinha').value;
+    if (!linha) return;
+    var arquivar = this.textContent !== 'Desarquivar';
+    fecharForm();
+    chamarServidor('arquivarProcesso', [Number(linha), arquivar],
+      arquivar ? 'Processo arquivado.' : 'Processo desarquivado.');
+  });
+
+  $('btnExcluirForm').addEventListener('click', function () {
+    var linha = $('cLinha').value;
+    if (!linha) return;
+    fecharForm();
+    pedirExclusao(linha);
+  });
+
+  $('btnConfirmarNao').addEventListener('click', function () {
+    $('fundoConfirmar').classList.remove('aberto');
+    linhaParaExcluir = null;
+  });
+  $('fundoConfirmar').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
+  $('btnVoltarEdicao').addEventListener('click', function () {
+    $('fundoConfirmar').classList.remove('aberto');
+    var p = dados.find(function (x) { return x.linha == linhaParaExcluir; });
+    linhaParaExcluir = null;
+    if (p) abrirForm(p);
+  });
+  $('btnConfirmarSim').addEventListener('click', function () {
+    $('fundoConfirmar').classList.remove('aberto');
+    if (linhaParaExcluir) chamarServidor('excluirProcesso', [Number(linhaParaExcluir)], 'Processo excluído.');
+    linhaParaExcluir = null;
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      fecharForm();
+      $('fundoConfirmar').classList.remove('aberto');
+    }
+  });
+
+  // ---------- Início ----------
+  carregando(true);
+  google.script.run
+    .withSuccessHandler(function (r) { carregando(false); aplicarResposta(r); })
+    .withFailureHandler(function (erro) {
+      carregando(false);
+      $('subtitulo').textContent = 'Falha ao carregar.';
+      toast('Erro ao carregar: ' + erro.message, true);
+    })
+    .obterProcessos();
+</script>
+</body>
+</html>
