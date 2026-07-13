@@ -249,10 +249,210 @@
     .topo .acoes { margin-left: 0; width: 100%; }
     .abas { overflow-x: auto; }
   }
+
+  /* ================= Layout com barra lateral ================= */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 232px; flex: none; background: var(--surface); border-right: 1px solid var(--hairline);
+    display: flex; flex-direction: column; gap: 6px; padding: 20px 14px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 60;
+  }
+  .sidebar .marca { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; }
+  .sidebar .marca .logo {
+    width: 34px; height: 34px; flex: none; border-radius: 9px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--accent), var(--violet)); font-size: 18px;
+  }
+  .sidebar .marca .nome { font-size: 14.5px; font-weight: 700; line-height: 1.2; }
+  .sidebar .marca .nome small { display: block; color: var(--muted); font-size: 11px; font-weight: 500; }
+  .nav-item {
+    display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+    background: none; border: none; color: var(--ink-2); cursor: pointer;
+    padding: 10px 12px; border-radius: 9px; font-size: 13.5px; font-weight: 600;
+    font-family: inherit; transition: background .12s ease, color .12s ease;
+  }
+  .nav-item .ic { font-size: 17px; width: 22px; text-align: center; flex: none; }
+  .nav-item:hover { background: var(--surface-2); color: var(--ink); }
+  .nav-item.ativo { background: var(--surface-3); color: var(--ink); }
+  .nav-item.ativo .ic { filter: saturate(1.2); }
+  .sidebar .rodape-nav { margin-top: auto; color: var(--muted); font-size: 11px; padding: 12px 10px 2px; }
+
+  .painel-principal { flex: 1 1 auto; min-width: 0; }
+  .view { display: none; }
+  .view.ativa { display: block; }
+
+  /* Barra superior só no mobile (com botão de menu) */
+  .topbar-mobile {
+    display: none; align-items: center; gap: 12px; padding: 12px 16px;
+    border-bottom: 1px solid var(--hairline); background: var(--surface); position: sticky; top: 0; z-index: 55;
+  }
+  .topbar-mobile .menu-btn {
+    background: var(--surface-2); border: 1px solid var(--hairline); color: var(--ink);
+    width: 38px; height: 38px; border-radius: 9px; font-size: 17px; cursor: pointer;
+  }
+  .topbar-mobile .titulo-mobile { font-size: 15px; font-weight: 700; }
+  .fundo-sidebar {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 59; display: none;
+  }
+  .fundo-sidebar.aberto { display: block; }
+
+  @media (max-width: 900px) {
+    .sidebar {
+      position: fixed; left: 0; top: 0; transform: translateX(-100%);
+      transition: transform .2s ease; box-shadow: 2px 0 24px rgba(0,0,0,.4);
+    }
+    .sidebar.aberta { transform: translateX(0); }
+    .topbar-mobile { display: flex; }
+  }
+
+  /* ================= Planner ================= */
+  .planner-wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 48px; }
+  .cal-cabecalho { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .cal-cabecalho h1 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+  .cal-nav { display: flex; align-items: center; gap: 6px; }
+  .cal-nav button {
+    background: var(--surface-2); border: 1px solid var(--hairline); color: var(--ink);
+    width: 34px; height: 34px; border-radius: 8px; font-size: 15px; cursor: pointer;
+  }
+  .cal-nav button:hover { background: var(--surface-3); }
+  .cal-cabecalho .acoes { margin-left: auto; display: flex; gap: 10px; }
+
+  .cal-legenda { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+  .cal-legenda .item { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12px; }
+  .cal-legenda .ponto { width: 9px; height: 9px; border-radius: 3px; }
+
+  .cal { background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden; }
+  .cal-semana-nomes, .cal-grade { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-semana-nomes { border-bottom: 1px solid var(--hairline); }
+  .cal-semana-nomes div {
+    padding: 10px 12px; color: var(--muted); font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em; text-align: center;
+  }
+  .cal-dia {
+    min-height: 118px; border-right: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline);
+    padding: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 5px;
+    transition: background .12s ease; position: relative;
+  }
+  .cal-dia:nth-child(7n) { border-right: none; }
+  .cal-dia:hover { background: var(--surface-2); }
+  .cal-dia.fora { background: rgba(255,255,255,.012); }
+  .cal-dia.fora .cal-num { color: var(--muted); opacity: .5; }
+  .cal-num { font-size: 12.5px; font-weight: 600; color: var(--ink-2); align-self: flex-start;
+    width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; }
+  .cal-dia.hoje .cal-num { background: var(--accent); color: #fff; }
+  .cal-chip {
+    font-size: 11.5px; line-height: 1.3; padding: 3px 7px; border-radius: 6px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid;
+  }
+  .cal-chip.feito { opacity: .55; text-decoration: line-through; }
+  .cal-mais { font-size: 11px; color: var(--muted); font-weight: 600; padding-left: 4px; }
+
+  /* Drawer lateral do dia */
+  .drawer-fundo { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 70; display: none; }
+  .drawer-fundo.aberto { display: block; }
+  .drawer {
+    position: fixed; top: 0; right: 0; height: 100vh; width: 400px; max-width: 92vw;
+    background: var(--surface); border-left: 1px solid var(--hairline); z-index: 71;
+    transform: translateX(100%); transition: transform .2s ease; display: flex; flex-direction: column;
+  }
+  .drawer.aberto { transform: translateX(0); }
+  .drawer-topo { display: flex; align-items: center; gap: 10px; padding: 18px 20px; border-bottom: 1px solid var(--hairline); }
+  .drawer-topo .dia-txt { font-size: 16px; font-weight: 700; }
+  .drawer-topo .dia-sub { color: var(--muted); font-size: 12px; }
+  .drawer-topo .fechar { margin-left: auto; background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; }
+  .drawer-topo .fechar:hover { color: var(--ink); }
+  .drawer-corpo { padding: 16px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .drawer-rodape { padding: 14px 20px; border-top: 1px solid var(--hairline); }
+  .drawer-rodape .btn { width: 100%; }
+
+  .ativ-card {
+    background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 11px;
+    padding: 12px 14px; border-left: 4px solid; display: flex; flex-direction: column; gap: 6px;
+  }
+  .ativ-card .linha1 { display: flex; align-items: flex-start; gap: 8px; }
+  .ativ-card .titulo { font-weight: 700; font-size: 14px; flex: 1; overflow-wrap: anywhere; }
+  .ativ-card.feita .titulo { text-decoration: line-through; color: var(--muted); }
+  .ativ-card .hora { color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .ativ-card .cat-tag { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
+  .ativ-card .desc { color: var(--ink-2); font-size: 12.5px; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .ativ-card .acoes { display: flex; gap: 4px; }
+  .ativ-card .acoes button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 3px 5px; border-radius: 6px; }
+  .ativ-card .acoes button:hover { color: var(--ink); background: var(--surface-3); }
+  .drawer-vazio { color: var(--muted); text-align: center; padding: 30px 10px; font-size: 13px; }
+
+  /* ================= Banco de Skills ================= */
+  .skills-wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 48px; }
+  .skills-topo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .skills-topo h1 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+  .skills-topo .sub { color: var(--muted); font-size: 13px; }
+  .dropzone {
+    border: 1.5px dashed var(--hairline); border-radius: 14px; padding: 26px; text-align: center;
+    color: var(--ink-2); cursor: pointer; transition: border-color .15s ease, background .15s ease;
+    margin-bottom: 22px; background: var(--surface);
+  }
+  .dropzone:hover, .dropzone.arrastando { border-color: var(--accent); background: var(--surface-2); }
+  .dropzone .icone { font-size: 26px; margin-bottom: 6px; }
+  .dropzone strong { color: var(--ink); }
+  .dropzone .dica { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+  .skills-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .skill-card {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 13px; padding: 16px;
+    display: flex; flex-direction: column; gap: 9px; cursor: pointer; transition: border-color .12s ease, background .12s ease;
+  }
+  .skill-card:hover { border-color: rgba(255,255,255,.22); background: var(--surface-2); }
+  .skill-card .cab { display: flex; align-items: center; gap: 10px; }
+  .skill-card .icone {
+    width: 36px; height: 36px; flex: none; border-radius: 9px; display: grid; place-items: center; font-size: 17px;
+    background: rgba(144,133,233,.16); color: var(--violet);
+  }
+  .skill-card .nome { font-size: 14.5px; font-weight: 700; overflow-wrap: anywhere; }
+  .skill-card .descricao { color: var(--ink-2); font-size: 13px; line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .skill-card .rodape { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 4px; }
+  .skill-card .arq { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .skill-card .acoes { display: flex; gap: 2px; }
+  .skill-card .acoes button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 4px 5px; border-radius: 6px; }
+  .skill-card .acoes button:hover { color: var(--ink); background: var(--surface-3); }
+  .skills-vazio { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 40px; }
+
+  .conteudo-skill {
+    background: var(--page); border: 1px solid var(--hairline); border-radius: 10px; padding: 14px;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12.5px; line-height: 1.6;
+    color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 52vh; overflow-y: auto;
+  }
+  .modal.largo { max-width: 720px; }
+
+  @media (max-width: 640px) {
+    .planner-wrap, .skills-wrap { padding: 16px 12px 40px; }
+    .cal-dia { min-height: 84px; padding: 5px; }
+    .cal-num { width: 22px; height: 22px; }
+    .cal-chip { display: none; }
+    .cal-dia::after { content: attr(data-qtd); color: var(--accent); font-size: 10px; font-weight: 700; }
+  }
 </style>
 </head>
 <body>
 
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="marca">
+      <div class="logo">🗂️</div>
+      <div class="nome">Gestão<small>Painel de trabalho</small></div>
+    </div>
+    <button class="nav-item ativo" data-view="processos"><span class="ic">📋</span> Controle de Processos</button>
+    <button class="nav-item" data-view="planner"><span class="ic">🗓️</span> Planner</button>
+    <button class="nav-item" data-view="skills"><span class="ic">🧩</span> Banco de Skills</button>
+    <div class="rodape-nav" id="rodapeNav"></div>
+  </aside>
+  <div class="fundo-sidebar" id="fundoSidebar"></div>
+
+  <div class="painel-principal">
+    <div class="topbar-mobile">
+      <button class="menu-btn" id="btnMenu" aria-label="Abrir menu">☰</button>
+      <span class="titulo-mobile" id="tituloMobile">Controle de Processos</span>
+    </div>
+
+    <section class="view ativa" id="view-processos">
 <div class="wrap">
   <div class="topo">
     <div>
@@ -326,6 +526,53 @@
     </div>
   </div>
 </div>
+    </section>
+
+    <!-- ===================== Planner ===================== -->
+    <section class="view" id="view-planner">
+      <div class="planner-wrap">
+        <div class="cal-cabecalho">
+          <div class="cal-nav">
+            <button id="calAnterior" title="Mês anterior">‹</button>
+            <button id="calProximo" title="Próximo mês">›</button>
+          </div>
+          <h1 id="calTitulo">—</h1>
+          <div class="acoes">
+            <button class="btn" id="calHoje">Hoje</button>
+            <button class="btn primario" id="calNova">+ Nova atividade</button>
+          </div>
+        </div>
+        <div class="cal-legenda" id="calLegenda"></div>
+        <div class="cal">
+          <div class="cal-semana-nomes">
+            <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+          </div>
+          <div class="cal-grade" id="calGrade"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Banco de Skills ===================== -->
+    <section class="view" id="view-skills">
+      <div class="skills-wrap">
+        <div class="skills-topo">
+          <div>
+            <h1>Banco de Skills</h1>
+            <div class="sub" id="skillsSub">Envie um arquivo para começar.</div>
+          </div>
+        </div>
+        <div class="dropzone" id="dropzone">
+          <div class="icone">⬆️</div>
+          <div>Arraste um arquivo aqui ou <strong>clique para selecionar</strong></div>
+          <div class="dica">Aceita <strong>.md</strong> (ou <strong>SKILL.md</strong>) e <strong>.zip</strong> de skills do Claude. Nome e descrição são capturados automaticamente.</div>
+          <input type="file" id="skillFile" accept=".md,.markdown,.txt,.zip" multiple style="display:none">
+        </div>
+        <div class="skills-grade" id="skillsGrade"></div>
+      </div>
+    </section>
+
+  </div><!-- /painel-principal -->
+</div><!-- /app -->
 
 <!-- Modal de cadastro/edição -->
 <div class="fundo-modal" id="fundoForm">
@@ -390,6 +637,90 @@
       <button type="button" class="btn" id="btnVoltarEdicao">Voltar à edição</button>
       <button type="button" class="btn" id="btnConfirmarNao">Cancelar</button>
       <button type="button" class="btn perigo" id="btnConfirmarSim">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer do dia (Planner) -->
+<div class="drawer-fundo" id="drawerFundo"></div>
+<aside class="drawer" id="drawerDia">
+  <div class="drawer-topo">
+    <div>
+      <div class="dia-txt" id="drawerDiaTxt">—</div>
+      <div class="dia-sub" id="drawerDiaSub"></div>
+    </div>
+    <button class="fechar" id="drawerFechar" aria-label="Fechar">×</button>
+  </div>
+  <div class="drawer-corpo" id="drawerCorpo"></div>
+  <div class="drawer-rodape">
+    <button class="btn primario" id="drawerNova">+ Nova atividade neste dia</button>
+  </div>
+</aside>
+
+<!-- Modal de atividade (Planner) -->
+<div class="fundo-modal" id="fundoAtividade">
+  <div class="modal">
+    <h2 id="tituloAtividade">Nova atividade</h2>
+    <form id="formAtividade">
+      <input type="hidden" id="aLinha">
+      <div class="grade">
+        <div class="campo largura-total">
+          <label for="aTitulo">Título</label>
+          <input id="aTitulo" required placeholder="Reunião, prazo, tarefa…">
+        </div>
+        <div class="campo">
+          <label for="aData">Data</label>
+          <input type="date" id="aData" required>
+        </div>
+        <div class="campo">
+          <label for="aCategoria">Categoria</label>
+          <select id="aCategoria"></select>
+        </div>
+        <div class="campo">
+          <label for="aInicio">Início</label>
+          <input type="time" id="aInicio">
+        </div>
+        <div class="campo">
+          <label for="aFim">Fim</label>
+          <input type="time" id="aFim">
+        </div>
+        <div class="campo largura-total">
+          <label for="aDescricao">Detalhes</label>
+          <textarea id="aDescricao" placeholder="Local, participantes, observações…"></textarea>
+        </div>
+      </div>
+      <div class="rodape">
+        <button type="button" class="btn perigo" id="btnExcluirAtiv" style="margin-right:auto;display:none">Excluir</button>
+        <button type="button" class="btn" id="btnCancelarAtiv">Cancelar</button>
+        <button type="submit" class="btn primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de detalhe da skill -->
+<div class="fundo-modal" id="fundoSkill">
+  <div class="modal largo">
+    <h2 id="skillModalTitulo">Skill</h2>
+    <div class="grade" style="margin-bottom:14px">
+      <div class="campo largura-total">
+        <label for="skNome">Nome</label>
+        <input id="skNome">
+      </div>
+      <div class="campo largura-total">
+        <label for="skDescricao">Descrição</label>
+        <textarea id="skDescricao"></textarea>
+      </div>
+      <div class="campo largura-total">
+        <label>Conteúdo</label>
+        <div class="conteudo-skill" id="skConteudo"></div>
+      </div>
+    </div>
+    <input type="hidden" id="skLinha">
+    <div class="rodape">
+      <button type="button" class="btn perigo" id="btnExcluirSkill" style="margin-right:auto">Excluir</button>
+      <button type="button" class="btn" id="btnFecharSkill">Fechar</button>
+      <button type="button" class="btn primario" id="btnSalvarSkill">Salvar alterações</button>
     </div>
   </div>
 </div>
@@ -866,8 +1197,347 @@
     if (e.key === 'Escape') {
       fecharForm();
       $('fundoConfirmar').classList.remove('aberto');
+      $('fundoAtividade').classList.remove('aberto');
+      $('fundoSkill').classList.remove('aberto');
+      fecharDrawer();
+      fecharSidebar();
     }
   });
+
+  /* ======================================================================
+   * Navegação entre telas + barra lateral (mobile)
+   * ==================================================================== */
+  var TITULOS_VIEW = { processos: 'Controle de Processos', planner: 'Planner', skills: 'Banco de Skills' };
+
+  function trocarView(view) {
+    document.querySelectorAll('.view').forEach(function (v) {
+      v.classList.toggle('ativa', v.id === 'view-' + view);
+    });
+    document.querySelectorAll('.nav-item').forEach(function (b) {
+      b.classList.toggle('ativo', b.dataset.view === view);
+    });
+    $('tituloMobile').textContent = TITULOS_VIEW[view] || '';
+    fecharSidebar();
+    if (view === 'planner' && !plannerCarregado) carregarPlanner();
+    if (view === 'skills' && !skillsCarregadas) carregarSkills();
+  }
+  function abrirSidebar() { $('sidebar').classList.add('aberta'); $('fundoSidebar').classList.add('aberto'); }
+  function fecharSidebar() { $('sidebar').classList.remove('aberta'); $('fundoSidebar').classList.remove('aberto'); }
+
+  document.querySelectorAll('.nav-item').forEach(function (b) {
+    b.addEventListener('click', function () { trocarView(b.dataset.view); });
+  });
+  $('btnMenu').addEventListener('click', abrirSidebar);
+  $('fundoSidebar').addEventListener('click', fecharSidebar);
+
+  /* ======================================================================
+   * PLANNER — calendário mensal + drawer do dia
+   * ==================================================================== */
+  var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  var DIAS_SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  var CATEGORIAS_PLANNER = [
+    { nome: 'Geral', cor: '#3987e5' },
+    { nome: 'Reunião', cor: '#9085e9' },
+    { nome: 'Prazo', cor: '#d03b3b' },
+    { nome: 'Tarefa', cor: '#199e70' },
+    { nome: 'Pessoal', cor: '#fab219' }
+  ];
+
+  var atividades = [];
+  var plannerCarregado = false;
+  var calRef = new Date();
+  var diaAberto = null; // 'yyyy-mm-dd' do drawer
+
+  function cap(s) { return String(s).charAt(0).toUpperCase() + String(s).slice(1); }
+  function corCategoria(nome) {
+    var c = CATEGORIAS_PLANNER.filter(function (x) { return x.nome === nome; })[0];
+    return c ? c.cor : '#3987e5';
+  }
+  function isoData(ano, mes, dia) {
+    return ano + '-' + String(mes + 1).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
+  }
+  function dataExtenso(iso) {
+    if (!ehData(iso)) return iso || '';
+    var p = iso.split('-'), d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    return DIAS_SEMANA[d.getDay()] + ', ' + Number(p[2]) + ' de ' + MESES[Number(p[1]) - 1] + ' de ' + p[0];
+  }
+  function atividadesDoDia(iso) {
+    return atividades.filter(function (a) { return a.data === iso; }).sort(function (a, b) {
+      return (a.inicio || '99:99') < (b.inicio || '99:99') ? -1 : 1;
+    });
+  }
+
+  function carregarPlanner() {
+    chamarFn('obterAtividades', [], function (r) {
+      atividades = r.atividades || [];
+      plannerCarregado = true;
+      renderLegenda();
+      renderCalendario();
+      if (diaAberto) renderDrawer();
+    });
+  }
+
+  function renderLegenda() {
+    $('calLegenda').innerHTML = CATEGORIAS_PLANNER.map(function (c) {
+      return '<div class="item"><span class="ponto" style="background:' + c.cor + '"></span>' + escapar(c.nome) + '</div>';
+    }).join('');
+  }
+
+  function renderCalendario() {
+    $('calTitulo').textContent = cap(MESES[calRef.getMonth()]) + ' de ' + calRef.getFullYear();
+    var ano = calRef.getFullYear(), mes = calRef.getMonth();
+    var primeiro = new Date(ano, mes, 1);
+    var inicio = new Date(ano, mes, 1 - primeiro.getDay());
+    var hoje = hojeIso();
+    var html = '';
+    for (var i = 0; i < 42; i++) {
+      var d = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + i);
+      var iso = isoData(d.getFullYear(), d.getMonth(), d.getDate());
+      var fora = d.getMonth() !== mes ? ' fora' : '';
+      var eHoje = iso === hoje ? ' hoje' : '';
+      var doDia = atividadesDoDia(iso);
+      var chips = doDia.slice(0, 3).map(function (a) {
+        var cor = corCategoria(a.categoria);
+        return '<div class="cal-chip' + (a.concluida ? ' feito' : '') + '" style="border-left-color:' + cor +
+          ';background:' + rgba(cor, 0.14) + ';color:' + cor + '">' +
+          (a.inicio ? escapar(a.inicio) + ' ' : '') + escapar(a.titulo) + '</div>';
+      }).join('');
+      var mais = doDia.length > 3 ? '<div class="cal-mais">+' + (doDia.length - 3) + ' mais</div>' : '';
+      html += '<div class="cal-dia' + fora + eHoje + '" data-dia="' + iso + '" data-qtd="' +
+        (doDia.length ? doDia.length + ' ●' : '') + '">' +
+        '<span class="cal-num">' + d.getDate() + '</span>' + chips + mais + '</div>';
+    }
+    $('calGrade').innerHTML = html;
+  }
+
+  $('calAnterior').addEventListener('click', function () {
+    calRef = new Date(calRef.getFullYear(), calRef.getMonth() - 1, 1); renderCalendario();
+  });
+  $('calProximo').addEventListener('click', function () {
+    calRef = new Date(calRef.getFullYear(), calRef.getMonth() + 1, 1); renderCalendario();
+  });
+  $('calHoje').addEventListener('click', function () { calRef = new Date(); renderCalendario(); });
+  $('calNova').addEventListener('click', function () { abrirFormAtividade(null, hojeIso()); });
+
+  $('calGrade').addEventListener('click', function (e) {
+    var cel = e.target.closest('.cal-dia');
+    if (cel) abrirDrawer(cel.dataset.dia);
+  });
+
+  // ----- Drawer do dia -----
+  function abrirDrawer(iso) {
+    diaAberto = iso;
+    renderDrawer();
+    $('drawerDia').classList.add('aberto');
+    $('drawerFundo').classList.add('aberto');
+  }
+  function fecharDrawer() {
+    $('drawerDia').classList.remove('aberto');
+    $('drawerFundo').classList.remove('aberto');
+    diaAberto = null;
+  }
+  function renderDrawer() {
+    if (!diaAberto) return;
+    var p = diaAberto.split('-');
+    $('drawerDiaTxt').textContent = Number(p[2]) + ' de ' + cap(MESES[Number(p[1]) - 1]);
+    $('drawerDiaSub').textContent = DIAS_SEMANA[new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getDay()];
+    var lista = atividadesDoDia(diaAberto);
+    if (!lista.length) {
+      $('drawerCorpo').innerHTML = '<div class="drawer-vazio">Nenhuma atividade neste dia.<br>Adicione a primeira abaixo.</div>';
+      return;
+    }
+    $('drawerCorpo').innerHTML = lista.map(function (a) {
+      var cor = corCategoria(a.categoria);
+      var hora = a.inicio ? (escapar(a.inicio) + (a.fim ? '–' + escapar(a.fim) : '')) : 'Sem horário';
+      return '<div class="ativ-card' + (a.concluida ? ' feita' : '') + '" style="border-left-color:' + cor + '">' +
+        '<div class="linha1">' +
+          '<span class="titulo">' + escapar(a.titulo) + '</span>' +
+          '<span class="cat-tag" style="background:' + rgba(cor, 0.16) + ';color:' + cor + '">' + escapar(a.categoria) + '</span>' +
+        '</div>' +
+        '<div class="hora">🕐 ' + hora + '</div>' +
+        (a.descricao ? '<div class="desc">' + escapar(a.descricao) + '</div>' : '') +
+        '<div class="acoes">' +
+          '<button title="' + (a.concluida ? 'Reabrir' : 'Concluir') + '" data-feito="' + a.linha + '">' + (a.concluida ? '↩️' : '✅') + '</button>' +
+          '<button title="Editar" data-edit-ativ="' + a.linha + '">✏️</button>' +
+          '<button title="Excluir" data-del-ativ="' + a.linha + '">🗑️</button>' +
+        '</div></div>';
+    }).join('');
+  }
+  $('drawerFechar').addEventListener('click', fecharDrawer);
+  $('drawerFundo').addEventListener('click', fecharDrawer);
+  $('drawerNova').addEventListener('click', function () { abrirFormAtividade(null, diaAberto || hojeIso()); });
+
+  $('drawerCorpo').addEventListener('click', function (e) {
+    var bE = e.target.closest('[data-edit-ativ]');
+    if (bE) { var a = atividades.filter(function (x) { return x.linha == bE.dataset.editAtiv; })[0]; if (a) abrirFormAtividade(a); return; }
+    var bF = e.target.closest('[data-feito]');
+    if (bF) {
+      var at = atividades.filter(function (x) { return x.linha == bF.dataset.feito; })[0];
+      chamarFn('alternarConcluidaAtividade', [Number(bF.dataset.feito), at ? !at.concluida : true], aplicarPlanner);
+      return;
+    }
+    var bD = e.target.closest('[data-del-ativ]');
+    if (bD && confirm('Excluir esta atividade?')) chamarFn('excluirAtividade', [Number(bD.dataset.delAtiv)], aplicarPlanner, 'Atividade excluída.');
+  });
+
+  function aplicarPlanner(r) {
+    atividades = r.atividades || [];
+    renderCalendario();
+    if (diaAberto) renderDrawer();
+  }
+
+  // ----- Formulário de atividade -----
+  function abrirFormAtividade(a, dataPadrao) {
+    var sel = $('aCategoria');
+    sel.innerHTML = CATEGORIAS_PLANNER.map(function (c) { return '<option value="' + escapar(c.nome) + '">' + escapar(c.nome) + '</option>'; }).join('');
+    $('tituloAtividade').textContent = a ? 'Editar atividade' : 'Nova atividade';
+    $('aLinha').value = a ? a.linha : '';
+    $('aTitulo').value = a ? a.titulo : '';
+    $('aData').value = a ? (ehData(a.data) ? a.data : dataPadrao) : (dataPadrao || hojeIso());
+    $('aCategoria').value = a ? a.categoria : 'Geral';
+    $('aInicio').value = a && a.inicio ? a.inicio : '';
+    $('aFim').value = a && a.fim ? a.fim : '';
+    $('aDescricao').value = a ? a.descricao : '';
+    $('btnExcluirAtiv').style.display = a ? '' : 'none';
+    $('btnExcluirAtiv').dataset.linha = a ? a.linha : '';
+    $('fundoAtividade').classList.add('aberto');
+    $('aTitulo').focus();
+  }
+  function fecharFormAtividade() { $('fundoAtividade').classList.remove('aberto'); }
+
+  $('btnCancelarAtiv').addEventListener('click', fecharFormAtividade);
+  $('fundoAtividade').addEventListener('click', function (e) { if (e.target === this) fecharFormAtividade(); });
+  $('btnExcluirAtiv').addEventListener('click', function () {
+    var linha = this.dataset.linha;
+    if (linha && confirm('Excluir esta atividade?')) { fecharFormAtividade(); chamarFn('excluirAtividade', [Number(linha)], aplicarPlanner, 'Atividade excluída.'); }
+  });
+  $('formAtividade').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var a = {
+      linha: $('aLinha').value || null,
+      titulo: $('aTitulo').value.trim(),
+      data: $('aData').value,
+      categoria: $('aCategoria').value,
+      inicio: $('aInicio').value || '',
+      fim: $('aFim').value || '',
+      descricao: $('aDescricao').value.trim()
+    };
+    if (!a.titulo || !a.data) { toast('Informe título e data.', true); return; }
+    fecharFormAtividade();
+    chamarFn('salvarAtividade', [a], function (r) {
+      aplicarPlanner(r);
+      if (diaAberto !== a.data) { calRef = new Date(a.data.split('-')[0], a.data.split('-')[1] - 1, 1); renderCalendario(); }
+    }, a.linha ? 'Atividade atualizada.' : 'Atividade criada.');
+  });
+
+  /* ======================================================================
+   * BANCO DE SKILLS — upload, cartões e detalhe
+   * ==================================================================== */
+  var skills = [];
+  var skillsCarregadas = false;
+
+  function carregarSkills() {
+    chamarFn('obterSkills', [], function (r) { skills = r.skills || []; skillsCarregadas = true; renderSkills(); });
+  }
+  function aplicarSkills(r) { skills = r.skills || []; renderSkills(); }
+
+  function renderSkills() {
+    $('skillsSub').textContent = skills.length
+      ? skills.length + (skills.length === 1 ? ' skill cadastrada.' : ' skills cadastradas.')
+      : 'Envie um arquivo para começar.';
+    if (!skills.length) {
+      $('skillsGrade').innerHTML = '<div class="skills-vazio">Nenhuma skill ainda. Arraste um arquivo .md ou .zip acima.</div>';
+      return;
+    }
+    $('skillsGrade').innerHTML = skills.map(function (s) {
+      return '<div class="skill-card" data-skill="' + s.linha + '">' +
+        '<div class="cab"><div class="icone">🧩</div><div class="nome">' + escapar(s.nome) + '</div></div>' +
+        '<div class="descricao">' + escapar(s.descricao) + '</div>' +
+        '<div class="rodape">' +
+          '<span class="arq" title="' + escapar(s.arquivo) + '">' + escapar(s.arquivo || '') + '</span>' +
+          '<span class="acoes">' +
+            '<button title="Ver detalhes" data-ver="' + s.linha + '">🔍</button>' +
+            '<button title="Excluir" data-del-skill="' + s.linha + '">🗑️</button>' +
+          '</span>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  $('skillsGrade').addEventListener('click', function (e) {
+    var bD = e.target.closest('[data-del-skill]');
+    if (bD) { if (confirm('Excluir esta skill?')) chamarFn('excluirSkill', [Number(bD.dataset.delSkill)], aplicarSkills, 'Skill excluída.'); return; }
+    var card = e.target.closest('[data-skill]');
+    if (card) abrirSkill(card.dataset.skill);
+  });
+
+  // ----- Upload -----
+  var dz = $('dropzone');
+  dz.addEventListener('click', function (e) { if (e.target.id === 'skillFile') return; $('skillFile').click(); });
+  dz.addEventListener('dragover', function (e) { e.preventDefault(); dz.classList.add('arrastando'); });
+  dz.addEventListener('dragleave', function () { dz.classList.remove('arrastando'); });
+  dz.addEventListener('drop', function (e) {
+    e.preventDefault(); dz.classList.remove('arrastando');
+    if (e.dataTransfer.files.length) enviarArquivos(e.dataTransfer.files);
+  });
+  $('skillFile').addEventListener('change', function () {
+    if (this.files.length) enviarArquivos(this.files);
+    this.value = '';
+  });
+
+  function enviarArquivos(fileList) {
+    var arquivos = Array.prototype.slice.call(fileList);
+    (function proximo(i) {
+      if (i >= arquivos.length) return;
+      var f = arquivos[i];
+      var tipo = /\.zip$/i.test(f.name) ? 'zip' : 'md';
+      var leitor = new FileReader();
+      leitor.onload = function () {
+        var base64 = String(leitor.result).split(',')[1] || '';
+        chamarFn('salvarSkillArquivo', [{ arquivo: f.name, tipo: tipo, base64: base64 }], function (r) {
+          aplicarSkills(r);
+          proximo(i + 1);
+        }, 'Skill "' + f.name + '" adicionada.');
+      };
+      leitor.onerror = function () { toast('Falha ao ler ' + f.name, true); proximo(i + 1); };
+      leitor.readAsDataURL(f);
+    })(0);
+  }
+
+  // ----- Detalhe / edição -----
+  function abrirSkill(linha) {
+    var s = skills.filter(function (x) { return x.linha == linha; })[0];
+    if (!s) return;
+    $('skLinha').value = s.linha;
+    $('skillModalTitulo').textContent = s.nome;
+    $('skNome').value = s.nome;
+    $('skDescricao').value = s.descricao;
+    $('skConteudo').textContent = s.conteudo || '(sem conteúdo capturado)';
+    $('fundoSkill').classList.add('aberto');
+  }
+  function fecharSkill() { $('fundoSkill').classList.remove('aberto'); }
+  $('btnFecharSkill').addEventListener('click', fecharSkill);
+  $('fundoSkill').addEventListener('click', function (e) { if (e.target === this) fecharSkill(); });
+  $('btnSalvarSkill').addEventListener('click', function () {
+    var linha = $('skLinha').value;
+    fecharSkill();
+    chamarFn('atualizarSkill', [Number(linha), $('skNome').value.trim(), $('skDescricao').value.trim()], aplicarSkills, 'Skill atualizada.');
+  });
+  $('btnExcluirSkill').addEventListener('click', function () {
+    var linha = $('skLinha').value;
+    if (confirm('Excluir esta skill?')) { fecharSkill(); chamarFn('excluirSkill', [Number(linha)], aplicarSkills, 'Skill excluída.'); }
+  });
+
+  /* ======================================================================
+   * Chamada genérica ao servidor
+   * ==================================================================== */
+  function chamarFn(nomeFn, args, onOk, msgSucesso) {
+    carregando(true);
+    var runner = google.script.run
+      .withSuccessHandler(function (resp) { carregando(false); if (onOk) onOk(resp); if (msgSucesso) toast(msgSucesso); })
+      .withFailureHandler(function (erro) { carregando(false); toast('Erro: ' + erro.message, true); });
+    runner[nomeFn].apply(runner, args || []);
+  }
 
   // ---------- Início ----------
   carregando(true);

@@ -303,3 +303,324 @@ function excluirProcesso(linha) {
     lock.releaseLock();
   }
 }
+
+/* ==========================================================================
+ * Infraestrutura genérica de abas (usada por Planner e Banco de Skills).
+ * Cada módulo tem sua própria aba na mesma planilha, criada sob demanda no
+ * primeiro acesso. As colunas são mapeadas por nome (obterMapaColunasPor_),
+ * o que permite migrar abas antigas sem perder dados já gravados.
+ * ======================================================================== */
+
+/** Retorna a aba `nome`, criando-a com `cabecalhos` (em negrito) se não existir. */
+function obterAbaPor_(nome, cabecalhos) {
+  var ss = obterPlanilha_();
+  var aba = ss.getSheetByName(nome);
+  if (!aba) {
+    aba = ss.insertSheet(nome);
+    aba.getRange(1, 1, 1, cabecalhos.length).setValues([cabecalhos]).setFontWeight('bold');
+    aba.setFrozenRows(1);
+  }
+  return aba;
+}
+
+/** Como obterMapaColunas_, mas para uma lista de cabeçalhos arbitrária. */
+function obterMapaColunasPor_(aba, cabecalhos) {
+  var ultCol = Math.max(aba.getLastColumn(), 1);
+  var cabec = aba.getRange(1, 1, 1, ultCol).getValues()[0];
+  var mapa = {};
+  cabec.forEach(function (nome, i) {
+    var n = String(nome).trim();
+    if (n) mapa[n] = i + 1;
+  });
+  cabecalhos.forEach(function (nome) {
+    if (!mapa[nome]) {
+      ultCol++;
+      aba.getRange(1, ultCol).setValue(nome).setFontWeight('bold');
+      mapa[nome] = ultCol;
+    }
+  });
+  return mapa;
+}
+
+/* ==========================================================================
+ * Planner — agenda de atividades por data (aba "Planner").
+ * ======================================================================== */
+
+var NOME_ABA_PLANNER = 'Planner';
+var CABECALHOS_PLANNER = ['Data', 'Título', 'Descrição', 'Início', 'Fim', 'Categoria', 'Concluída'];
+var COL_PLANNER = {
+  data: 'Data', titulo: 'Título', descricao: 'Descrição',
+  inicio: 'Início', fim: 'Fim', categoria: 'Categoria', concluida: 'Concluída'
+};
+
+/** Lê todas as atividades do Planner. Chamado pelo cliente. */
+function obterAtividades() {
+  var aba = obterAbaPor_(NOME_ABA_PLANNER, CABECALHOS_PLANNER);
+  var mapa = obterMapaColunasPor_(aba, CABECALHOS_PLANNER);
+  var ultCol = aba.getLastColumn();
+  var ultima = aba.getLastRow();
+  var itens = [];
+  if (ultima >= 2) {
+    var valores = aba.getRange(2, 1, ultima - 1, ultCol).getValues();
+    valores.forEach(function (r, i) {
+      var vazio = r.every(function (c) { return c === '' || c === null; });
+      if (vazio) return;
+      itens.push({
+        linha: i + 2,
+        data: deCelula_(r[mapa[COL_PLANNER.data] - 1]),
+        titulo: deCelula_(r[mapa[COL_PLANNER.titulo] - 1]),
+        descricao: deCelula_(r[mapa[COL_PLANNER.descricao] - 1]),
+        inicio: deCelula_(r[mapa[COL_PLANNER.inicio] - 1]),
+        fim: deCelula_(r[mapa[COL_PLANNER.fim] - 1]),
+        categoria: deCelula_(r[mapa[COL_PLANNER.categoria] - 1]),
+        concluida: ehVerdadeiro_(r[mapa[COL_PLANNER.concluida] - 1])
+      });
+    });
+  }
+  return { atividades: itens };
+}
+
+/**
+ * Cria (sem a.linha) ou atualiza (com a.linha) uma atividade.
+ * Campos: data (yyyy-MM-dd), titulo, descricao, inicio ('HH:mm'), fim ('HH:mm'),
+ * categoria, concluida.
+ */
+function salvarAtividade(a) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_PLANNER, CABECALHOS_PLANNER);
+    var mapa = obterMapaColunasPor_(aba, CABECALHOS_PLANNER);
+    var ultCol = aba.getLastColumn();
+    var linha = Number(a.linha);
+    var novo = !(linha >= 2);
+    if (novo) linha = aba.getLastRow() + 1;
+
+    // Início/Fim guardados como texto para o Sheets não converter "08:00" em hora.
+    aba.getRange(linha, mapa[COL_PLANNER.inicio]).setNumberFormat('@');
+    aba.getRange(linha, mapa[COL_PLANNER.fim]).setNumberFormat('@');
+    aba.getRange(linha, mapa[COL_PLANNER.data]).setNumberFormat('dd/mm/yyyy');
+
+    var faixa = aba.getRange(linha, 1, 1, ultCol);
+    var row = novo ? novaLinhaVazia_(ultCol) : faixa.getValues()[0];
+    function set(campo, valor) { row[mapa[COL_PLANNER[campo]] - 1] = valor; }
+
+    set('data', paraCelula_(a.data));
+    set('titulo', a.titulo || '');
+    set('descricao', a.descricao || '');
+    set('inicio', a.inicio || '');
+    set('fim', a.fim || '');
+    set('categoria', a.categoria || 'Geral');
+    set('concluida', a.concluida ? true : false);
+
+    faixa.setValues([row]);
+    return obterAtividades();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Marca/desmarca a atividade como concluída. */
+function alternarConcluidaAtividade(linha, concluida) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_PLANNER, CABECALHOS_PLANNER);
+    var mapa = obterMapaColunasPor_(aba, CABECALHOS_PLANNER);
+    linha = Number(linha);
+    if (!(linha >= 2)) throw new Error('Linha inválida.');
+    aba.getRange(linha, mapa[COL_PLANNER.concluida]).setValue(concluida ? true : false);
+    return obterAtividades();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Exclui a atividade. */
+function excluirAtividade(linha) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_PLANNER, CABECALHOS_PLANNER);
+    linha = Number(linha);
+    if (!(linha >= 2)) throw new Error('Linha inválida.');
+    aba.deleteRow(linha);
+    return obterAtividades();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ==========================================================================
+ * Banco de Skills — cartões de skills do Claude (aba "Skills").
+ * O upload de um .md ou .zip é analisado no servidor: extraímos "name" e
+ * "description" do front-matter YAML (padrão SKILL.md do Claude). Sem
+ * front-matter, usamos o nome do arquivo e o primeiro parágrafo como fallback.
+ * ======================================================================== */
+
+var NOME_ABA_SKILLS = 'Skills';
+var CABECALHOS_SKILLS = ['Nome', 'Descrição', 'Conteúdo', 'Arquivo', 'Data de upload'];
+var COL_SKILLS = {
+  nome: 'Nome', descricao: 'Descrição', conteudo: 'Conteúdo',
+  arquivo: 'Arquivo', dataUpload: 'Data de upload'
+};
+// Célula da planilha aceita ~50 mil caracteres; deixamos margem.
+var LIMITE_CONTEUDO_SKILL = 45000;
+
+/** Lê todas as skills. Chamado pelo cliente. */
+function obterSkills() {
+  var aba = obterAbaPor_(NOME_ABA_SKILLS, CABECALHOS_SKILLS);
+  var mapa = obterMapaColunasPor_(aba, CABECALHOS_SKILLS);
+  var ultCol = aba.getLastColumn();
+  var ultima = aba.getLastRow();
+  var itens = [];
+  if (ultima >= 2) {
+    var valores = aba.getRange(2, 1, ultima - 1, ultCol).getValues();
+    valores.forEach(function (r, i) {
+      var vazio = r.every(function (c) { return c === '' || c === null; });
+      if (vazio) return;
+      itens.push({
+        linha: i + 2,
+        nome: deCelula_(r[mapa[COL_SKILLS.nome] - 1]),
+        descricao: deCelula_(r[mapa[COL_SKILLS.descricao] - 1]),
+        conteudo: deCelula_(r[mapa[COL_SKILLS.conteudo] - 1]),
+        arquivo: deCelula_(r[mapa[COL_SKILLS.arquivo] - 1]),
+        dataUpload: deCelula_(r[mapa[COL_SKILLS.dataUpload] - 1])
+      });
+    });
+  }
+  return { skills: itens };
+}
+
+/**
+ * Recebe um arquivo enviado pelo cliente, extrai nome/descrição e grava a skill.
+ * payload: { arquivo: nome do arquivo, tipo: 'md'|'zip', base64: conteúdo }.
+ */
+function salvarSkillArquivo(payload) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    var bytes = Utilities.base64Decode(payload.base64 || '');
+    var conteudo = '';
+    var tipo = (payload.tipo || '').toLowerCase();
+    var nomeArquivo = payload.arquivo || 'skill';
+
+    if (tipo === 'zip' || /\.zip$/i.test(nomeArquivo)) {
+      var blob = Utilities.newBlob(bytes, 'application/zip', nomeArquivo);
+      var arquivos = Utilities.unzip(blob);
+      var alvo = null;
+      // Preferimos SKILL.md (padrão do Claude), depois qualquer .md.
+      arquivos.forEach(function (f) {
+        if (!alvo && /(^|\/)SKILL\.md$/i.test(f.getName())) alvo = f;
+      });
+      if (!alvo) {
+        arquivos.forEach(function (f) {
+          if (!alvo && /\.(md|markdown|txt)$/i.test(f.getName())) alvo = f;
+        });
+      }
+      conteudo = alvo ? alvo.getDataAsString('UTF-8') : '';
+    } else {
+      conteudo = Utilities.newBlob(bytes).getDataAsString('UTF-8');
+    }
+
+    var meta = extrairMetaSkill_(conteudo);
+    var nome = meta.nome || nomeBaseArquivo_(nomeArquivo);
+    var descricao = meta.descricao || primeiroParagrafo_(conteudo) || 'Sem descrição.';
+    if (conteudo.length > LIMITE_CONTEUDO_SKILL) {
+      conteudo = conteudo.slice(0, LIMITE_CONTEUDO_SKILL) + '\n\n… (conteúdo truncado)';
+    }
+
+    var aba = obterAbaPor_(NOME_ABA_SKILLS, CABECALHOS_SKILLS);
+    var mapa = obterMapaColunasPor_(aba, CABECALHOS_SKILLS);
+    var ultCol = aba.getLastColumn();
+    var linha = aba.getLastRow() + 1;
+    var row = novaLinhaVazia_(ultCol);
+    row[mapa[COL_SKILLS.nome] - 1] = nome;
+    row[mapa[COL_SKILLS.descricao] - 1] = descricao;
+    row[mapa[COL_SKILLS.conteudo] - 1] = conteudo;
+    row[mapa[COL_SKILLS.arquivo] - 1] = nomeArquivo;
+    row[mapa[COL_SKILLS.dataUpload] - 1] = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    aba.getRange(linha, 1, 1, ultCol).setValues([row]);
+    return obterSkills();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Edita manualmente o nome/descrição de uma skill já cadastrada. */
+function atualizarSkill(linha, nome, descricao) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_SKILLS, CABECALHOS_SKILLS);
+    var mapa = obterMapaColunasPor_(aba, CABECALHOS_SKILLS);
+    linha = Number(linha);
+    if (!(linha >= 2)) throw new Error('Linha inválida.');
+    aba.getRange(linha, mapa[COL_SKILLS.nome]).setValue(nome || '');
+    aba.getRange(linha, mapa[COL_SKILLS.descricao]).setValue(descricao || '');
+    return obterSkills();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Exclui a skill. */
+function excluirSkill(linha) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_SKILLS, CABECALHOS_SKILLS);
+    linha = Number(linha);
+    if (!(linha >= 2)) throw new Error('Linha inválida.');
+    aba.deleteRow(linha);
+    return obterSkills();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Extrai name/description do front-matter YAML (entre '---' no topo). */
+function extrairMetaSkill_(texto) {
+  var res = { nome: '', descricao: '' };
+  if (!texto) return res;
+  var t = texto.replace(/^﻿/, '');
+  var m = t.match(/^---\s*\r?\n([\s\S]*?)\r?\n---/);
+  if (!m) return res;
+  var bloco = m[1];
+  var nm = bloco.match(/^\s*name:\s*(.+?)\s*$/mi);
+  var dm = bloco.match(/^\s*description:\s*(.+?)\s*$/mi);
+  if (nm) res.nome = limparYaml_(nm[1]);
+  if (dm) res.descricao = limparYaml_(dm[1]);
+  return res;
+}
+
+/** Remove aspas envolventes e espaços de um valor YAML simples. */
+function limparYaml_(v) {
+  v = String(v == null ? '' : v).trim();
+  if ((v.charAt(0) === '"' && v.slice(-1) === '"') ||
+      (v.charAt(0) === "'" && v.slice(-1) === "'")) {
+    v = v.slice(1, -1);
+  }
+  return v.trim();
+}
+
+/** Nome do arquivo sem extensão nem caminho (fallback para o nome da skill). */
+function nomeBaseArquivo_(nome) {
+  var base = String(nome || '').split('/').pop().split('\\').pop();
+  return base.replace(/\.(md|markdown|txt|zip)$/i, '') || 'Skill';
+}
+
+/** Primeiro parágrafo de texto útil de um markdown (fallback de descrição). */
+function primeiroParagrafo_(texto) {
+  if (!texto) return '';
+  var t = texto.replace(/^﻿/, '').replace(/^---\s*\r?\n[\s\S]*?\r?\n---\s*/, '');
+  var linhas = t.split(/\r?\n/);
+  for (var i = 0; i < linhas.length; i++) {
+    var l = linhas[i].trim();
+    if (!l) continue;
+    if (l.charAt(0) === '#') { l = l.replace(/^#+\s*/, '').trim(); if (!l) continue; }
+    if (l.length > 300) l = l.slice(0, 297) + '…';
+    return l;
+  }
+  return '';
+}
