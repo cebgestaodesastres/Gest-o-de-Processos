@@ -357,11 +357,17 @@ function obterMapaColunasPor_(aba, cabecalhos) {
 
 var NOME_ABA_PLANNER = 'Planner';
 var CABECALHOS_PLANNER = ['Data', 'Data fim', 'Título', 'Descrição', 'Início', 'Fim',
-  'Categoria', 'Concluída', 'Processos SEI', 'Links', 'Notificação'];
+  'Categoria', 'Concluída', 'Processos SEI', 'Links', 'Notificação', 'Notificado'];
 var COL_PLANNER = {
   data: 'Data', dataFim: 'Data fim', titulo: 'Título', descricao: 'Descrição',
   inicio: 'Início', fim: 'Fim', categoria: 'Categoria', concluida: 'Concluída',
-  processos: 'Processos SEI', links: 'Links', notificacao: 'Notificação'
+  processos: 'Processos SEI', links: 'Links', notificacao: 'Notificação', notificado: 'Notificado'
+};
+
+// Antecedências aceitas no campo "Notificação" -> minutos antes do evento.
+var OFFSETS_NOTIFICACAO = {
+  'No dia': 0, '1 hora antes': 60, '3 horas antes': 180,
+  '1 dia antes': 1440, '2 dias antes': 2880, '1 semana antes': 10080
 };
 
 /** Lê todas as atividades do Planner. Chamado pelo cliente. */
@@ -432,6 +438,7 @@ function salvarAtividade(a) {
     set('processos', a.processos || '');
     set('links', a.links || '');
     set('notificacao', a.notificacao || '');
+    set('notificado', ''); // reavalia a notificação após qualquer alteração
 
     faixa.setValues([row]);
     return obterAtividades();
@@ -469,6 +476,105 @@ function excluirAtividade(linha) {
   } finally {
     lock.releaseLock();
   }
+}
+
+/* ==========================================================================
+ * Notificações por e-mail (nativas do Apps Script).
+ *
+ * CONFIGURAÇÃO (fazer uma única vez no editor do Apps Script):
+ *   1) Rode `instalarGatilhoNotificacoes` — cria um gatilho de tempo que
+ *      executa `verificarNotificacoes` a cada 15 minutos.
+ *   2) (Opcional) Rode `definirEmailNotificacao('seu-email@dominio')` para
+ *      escolher o destinatário. Sem isso, usa o e-mail da conta dona do
+ *      script (quem faz o deploy).
+ * ======================================================================== */
+
+/** Cria/renova o gatilho de tempo das notificações (rodar uma vez). */
+function instalarGatilhoNotificacoes() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'verificarNotificacoes') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('verificarNotificacoes').timeBased().everyMinutes(15).create();
+  return 'Gatilho instalado: verificarNotificacoes a cada 15 min.';
+}
+
+/** Define o e-mail que receberá as notificações. */
+function definirEmailNotificacao(email) {
+  PropertiesService.getScriptProperties().setProperty('EMAIL_NOTIFICACAO', String(email || '').trim());
+  return 'E-mail de notificação definido: ' + email;
+}
+
+function obterEmailNotificacao_() {
+  var e = PropertiesService.getScriptProperties().getProperty('EMAIL_NOTIFICACAO');
+  if (e) return e;
+  try { e = Session.getActiveUser().getEmail(); } catch (x) { e = ''; }
+  if (!e) { try { e = Session.getEffectiveUser().getEmail(); } catch (x) { e = ''; } }
+  return e;
+}
+
+/**
+ * Varre o Planner e envia e-mail das atividades cujo horário de aviso já
+ * chegou e que ainda não foram notificadas. Chamada pelo gatilho de tempo.
+ */
+function verificarNotificacoes() {
+  var email = obterEmailNotificacao_();
+  if (!email) return;
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return;
+  try {
+    var aba = obterAbaPor_(NOME_ABA_PLANNER, CABECALHOS_PLANNER);
+    var mapa = obterMapaColunasPor_(aba, CABECALHOS_PLANNER);
+    var ultima = aba.getLastRow();
+    if (ultima < 2) return;
+    var ultCol = aba.getLastColumn();
+    var valores = aba.getRange(2, 1, ultima - 1, ultCol).getValues();
+    var tz = Session.getScriptTimeZone();
+    var agora = new Date();
+
+    valores.forEach(function (r, i) {
+      var notif = String(r[mapa[COL_PLANNER.notificacao] - 1] || '').trim();
+      if (!(notif in OFFSETS_NOTIFICACAO)) return;
+      if (String(r[mapa[COL_PLANNER.notificado] - 1] || '').trim()) return; // já enviado
+
+      var iso = deCelula_(r[mapa[COL_PLANNER.data] - 1]);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+      var p = iso.split('-');
+      var inicio = String(r[mapa[COL_PLANNER.inicio] - 1] || '').trim();
+      var hh = 8, mm = 0; // sem horário -> aviso considerando 08:00
+      if (/^\d{1,2}:\d{2}$/.test(inicio)) { hh = Number(inicio.split(':')[0]); mm = Number(inicio.split(':')[1]); }
+      var evento = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), hh, mm, 0);
+      var quando = new Date(evento.getTime() - OFFSETS_NOTIFICACAO[notif] * 60000);
+
+      // Envia quando o horário de aviso já passou e o evento não faz mais de 1 dia.
+      if (agora >= quando && agora <= new Date(evento.getTime() + 86400000)) {
+        enviarEmailNotificacao_(email, r, mapa, evento, notif, tz);
+        aba.getRange(i + 2, mapa[COL_PLANNER.notificado]).setValue(Utilities.formatDate(agora, tz, 'yyyy-MM-dd HH:mm'));
+      }
+    });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function enviarEmailNotificacao_(email, r, mapa, evento, notif, tz) {
+  var titulo = String(r[mapa[COL_PLANNER.titulo] - 1] || '(sem título)');
+  var categoria = String(r[mapa[COL_PLANNER.categoria] - 1] || '');
+  var descricao = String(r[mapa[COL_PLANNER.descricao] - 1] || '');
+  var inicio = String(r[mapa[COL_PLANNER.inicio] - 1] || '');
+  var fim = String(r[mapa[COL_PLANNER.fim] - 1] || '');
+  var processos = String(r[mapa[COL_PLANNER.processos] - 1] || '');
+  var links = String(r[mapa[COL_PLANNER.links] - 1] || '');
+  var quandoTxt = Utilities.formatDate(evento, tz, "EEEE, dd/MM/yyyy") + (inicio ? ' às ' + inicio + (fim ? '–' + fim : '') : '');
+
+  var linhas = [
+    'Lembrete de atividade do Planner (' + notif + '):', '',
+    '• ' + titulo, '• Quando: ' + quandoTxt];
+  if (categoria) linhas.push('• Categoria: ' + categoria);
+  if (descricao) linhas.push('• Detalhes: ' + descricao);
+  if (processos.trim()) linhas.push('', 'Processos SEI:', processos);
+  if (links.trim()) linhas.push('', 'Links de referência:', links);
+
+  MailApp.sendEmail(email, '🔔 Lembrete: ' + titulo, linhas.join('\n'));
 }
 
 /* ==========================================================================

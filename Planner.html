@@ -471,7 +471,7 @@
     var links = renderRefs(a.links, false);
     if (links) html += '<div class="evento-secao"><div class="rot">🔗 Links de referência</div>' + links + '</div>';
     html += '<div class="evento-secao"><div class="rot">🔔 Notificação</div><div class="txt">' +
-      (a.notificacao ? escapar(a.notificacao) + ' (envio por e-mail/WhatsApp — configuração pendente)' : 'Nenhuma programada.') + '</div></div>';
+      (a.notificacao ? escapar(a.notificacao) + ' — lembrete por e-mail' : 'Nenhuma programada.') + '</div></div>';
     $('eventoConteudo').innerHTML = html;
   }
   $('evtFechar').addEventListener('click', fecharEvento);
@@ -516,9 +516,8 @@
       'Belo Horizonte, ' + hoje + '.\n\n' +
       '_______________________________________\n[Autoridade responsável]';
     $('docSaida').textContent = corpo;
-    $('docDica').textContent = skill
-      ? 'Rascunho por template. Com a skill "' + skill + '" + API do Claude, este texto seria redigido no padrão completo da skill.'
-      : 'Rascunho por template. Escolha uma skill acima para usar o modelo dela (requer geração por IA — a combinar).';
+    $('docDica').textContent = 'Rascunho preenchido com os dados do evento' +
+      (skill ? ' (modelo: ' + skill + ')' : '') + '. Ajuste o texto conforme necessário e use "Copiar".';
   }
   $('docTipo').addEventListener('change', gerarDoc);
   $('docSkill').addEventListener('change', gerarDoc);
