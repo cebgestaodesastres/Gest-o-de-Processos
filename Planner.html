@@ -16,6 +16,7 @@
         <button data-modo="mes">Mês</button>
       </div>
       <div class="acoes">
+        <button class="btn" id="btnSincAgenda" title="Importar novos eventos do Google Agenda">🔄 Agenda</button>
         <button class="btn" id="btnResumo">📊 Resumo</button>
         <button class="btn" id="calHoje">Hoje</button>
         <button class="btn primario" id="calNova">+ Nova atividade</button>
@@ -182,6 +183,7 @@
       <span class="dica" id="resumoFaixa"></span>
     </div>
     <div class="resumo-tiles" id="resumoTiles"></div>
+    <div id="prazosBloco"></div>
     <div class="resumo-lista" id="resumoLista"></div>
     <div class="rodape">
       <button type="button" class="btn" id="resumoFechar">Fechar</button>
@@ -238,6 +240,21 @@
     return a.inicio + (a.fim ? '–' + a.fim : '');
   }
   function achar(linha) { return atividades.filter(function (x) { return x.linha == linha; })[0]; }
+
+  // ----- Checklist -----
+  function parseChecklist(txt) {
+    return String(txt || '').split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
+      return { feito: /^\[x\]/i.test(l), texto: l.replace(/^\[[ xX]?\]\s*/, '') };
+    });
+  }
+  function serializeChecklist(itens) {
+    return itens.map(function (it) { return (it.feito ? '[x] ' : '[ ] ') + it.texto; }).join('\n');
+  }
+  function progressoChecklist(txt) {
+    var itens = parseChecklist(txt);
+    var feitos = itens.filter(function (i) { return i.feito; }).length;
+    return { itens: itens, total: itens.length, feitos: feitos, pct: itens.length ? Math.round(feitos / itens.length * 100) : 0 };
+  }
 
   // ----- Render de listas de SEI / links (reusa ehUrl/ancora do módulo Gestão) -----
   function renderRefs(bruto, comoSei) {
@@ -387,6 +404,9 @@
     anoRef = agora.getFullYear(); calRef = agora; renderPlanner();
   });
   $('calNova').addEventListener('click', function () { abrirFormAtividade(null, hojeIso()); });
+  $('btnSincAgenda').addEventListener('click', function () {
+    chamarFn('sincronizarAgendaAgora', [], aplicarPlanner, 'Agenda sincronizada.');
+  });
 
   // ----- Drawer do dia -----
   function abrirDrawer(iso) {
@@ -418,6 +438,8 @@
       if (a.notificacao) selos += ' <span class="badge-info">🔔 ' + escapar(a.notificacao) + '</span>';
       if (qtdSei) selos += ' <span class="badge-info">📎 ' + qtdSei + ' SEI</span>';
       if (qtdLink) selos += ' <span class="badge-info">🔗 ' + qtdLink + '</span>';
+      var pg = progressoChecklist(a.checklist);
+      var progHtml = pg.total ? '<div class="mini-prog">✓ <div class="barra"><i style="width:' + pg.pct + '%"></i></div> ' + pg.feitos + '/' + pg.total + '</div>' : '';
       return '<div class="ativ-card' + (a.concluida ? ' feita' : '') + '" style="border-left-color:' + cor + '">' +
         '<div class="linha1">' +
           '<span class="titulo clicavel" data-abrir="' + a.linha + '">' + escapar(a.titulo) + '</span>' +
@@ -426,6 +448,7 @@
         '<div class="hora">🕐 ' + escapar(horaTexto(a)) + (ehData(a.dataFim) && a.dataFim > a.data ? ' · ' + escapar(periodoTexto(a)) : '') + '</div>' +
         (a.descricao ? '<div class="desc">' + escapar(a.descricao) + '</div>' : '') +
         (selos ? '<div>' + selos + '</div>' : '') +
+        progHtml +
         '<div class="acoes">' +
           '<button title="' + (a.concluida ? 'Reabrir' : 'Concluir') + '" data-feito="' + a.linha + '">' + (a.concluida ? '↩️' : '✅') + '</button>' +
           '<button title="Abrir cartão" data-abrir="' + a.linha + '">🔍</button>' +
@@ -472,8 +495,46 @@
     if (links) html += '<div class="evento-secao"><div class="rot">🔗 Links de referência</div>' + links + '</div>';
     html += '<div class="evento-secao"><div class="rot">🔔 Notificação</div><div class="txt">' +
       (a.notificacao ? escapar(a.notificacao) + ' — lembrete por e-mail' : 'Nenhuma programada.') + '</div></div>';
+
+    // Checklist com progresso
+    var pg = progressoChecklist(a.checklist);
+    html += '<div class="evento-secao"><div class="rot">✓ Checklist</div>';
+    if (pg.total) {
+      html += '<div class="progresso-rot"><span>' + pg.feitos + '/' + pg.total + ' concluídos</span><span>' + pg.pct + '%</span></div>' +
+        '<div class="progresso"><i style="width:' + pg.pct + '%"></i></div>';
+    }
+    html += '<div class="checklist">' + (pg.total ? pg.itens.map(function (it, idx) {
+      return '<div class="chk-item' + (it.feito ? ' feito' : '') + '">' +
+        '<input type="checkbox" data-chk="' + idx + '"' + (it.feito ? ' checked' : '') + '>' +
+        '<label>' + escapar(it.texto) + '</label>' +
+        '<button class="del" title="Remover" data-chk-del="' + idx + '">✕</button></div>';
+    }).join('') : '<div class="chk-vazio">Nenhum item ainda. Adicione o que precisa ser feito neste prazo.</div>') + '</div>';
+    html += '<div class="chk-add"><input id="chkNovo" placeholder="Adicionar item…"><button type="button" class="btn" id="chkAdd">Adicionar</button></div>';
+    html += '</div>';
+
     $('eventoConteudo').innerHTML = html;
   }
+
+  // Interações do checklist (delegadas, pois o conteúdo é re-renderizado)
+  function checklistDoEvento() { var a = achar(eventoAberto); return a ? parseChecklist(a.checklist) : []; }
+  function salvarChecklist(itens) { chamarFn('atualizarChecklist', [Number(eventoAberto), serializeChecklist(itens)], aplicarPlanner); }
+  function adicionarItemChecklist() {
+    var inp = $('chkNovo'); if (!inp) return;
+    var txt = inp.value.trim(); if (!txt) return;
+    var itens = checklistDoEvento(); itens.push({ feito: false, texto: txt }); salvarChecklist(itens);
+  }
+  $('eventoConteudo').addEventListener('change', function (e) {
+    var chk = e.target.closest('input[type=checkbox][data-chk]');
+    if (chk) { var itens = checklistDoEvento(); var i = Number(chk.dataset.chk); if (itens[i]) { itens[i].feito = chk.checked; salvarChecklist(itens); } }
+  });
+  $('eventoConteudo').addEventListener('click', function (e) {
+    var del = e.target.closest('[data-chk-del]');
+    if (del) { var itens = checklistDoEvento(); itens.splice(Number(del.dataset.chkDel), 1); salvarChecklist(itens); return; }
+    if (e.target.id === 'chkAdd') adicionarItemChecklist();
+  });
+  $('eventoConteudo').addEventListener('keydown', function (e) {
+    if (e.target.id === 'chkNovo' && e.key === 'Enter') { e.preventDefault(); adicionarItemChecklist(); }
+  });
   $('evtFechar').addEventListener('click', fecharEvento);
   $('fundoEvento').addEventListener('click', function (e) { if (e.target === this) fecharEvento(); });
   $('evtEditar').addEventListener('click', function () { var a = achar(eventoAberto); if (a) { fecharEvento(); abrirFormAtividade(a); } });
@@ -626,6 +687,7 @@
       tiles += '<div class="resumo-tile"><div class="rot"><span class="ponto" style="background:' + c.cor + '"></span>' + escapar(c.nome) + '</div><div class="val">' + porCat[c.nome] + '</div></div>';
     });
     $('resumoTiles').innerHTML = tiles;
+    renderPrazos(lista);
 
     if (!lista.length) { $('resumoLista').innerHTML = '<div class="resumo-vazio">Nenhuma atividade neste período.</div>'; return; }
     $('resumoLista').innerHTML = lista.map(function (a) {
@@ -636,6 +698,39 @@
         '</div>';
     }).join('');
   }
+  // Indicador de prazos (cores de status: vencido / próximo / ok — sempre com ícone + rótulo)
+  function statusPrazo(iso) {
+    var d = diasAte(iso);
+    if (d === null) return null;
+    if (d < 0) return { cor: '#d03b3b', chave: 'vencido', icone: '⚠', txt: d === -1 ? 'venceu ontem' : 'venceu há ' + (-d) + ' d' };
+    if (d <= 3) return { cor: '#e5793b', chave: 'urg', icone: '🔴', txt: d === 0 ? 'vence hoje' : (d === 1 ? 'vence amanhã' : 'em ' + d + ' d') };
+    if (d <= 7) return { cor: '#fab219', chave: 'prox', icone: '🟠', txt: 'em ' + d + ' d' };
+    return { cor: '#0ca30c', chave: 'ok', icone: '🟢', txt: 'em ' + d + ' d' };
+  }
+  function renderPrazos(lista) {
+    var prazos = lista.filter(function (a) { return a.categoria === 'Prazo' && !a.concluida && ehData(a.data); })
+      .sort(function (a, b) { return a.data < b.data ? -1 : 1; });
+    if (!prazos.length) { $('prazosBloco').innerHTML = ''; return; }
+    var cont = { vencido: 0, urg: 0, prox: 0, ok: 0 };
+    prazos.forEach(function (a) { var s = statusPrazo(a.data); if (s) cont[s.chave]++; });
+    var total = prazos.length;
+    var seg = [['vencido', '#d03b3b', 'Vencidos'], ['urg', '#e5793b', '≤ 3 dias'], ['prox', '#fab219', '≤ 7 dias'], ['ok', '#0ca30c', '> 7 dias']];
+    var barra = seg.map(function (s) { var c = cont[s[0]]; return c ? '<span style="background:' + s[1] + ';width:' + (c / total * 100) + '%"></span>' : ''; }).join('');
+    var legenda = seg.filter(function (s) { return cont[s[0]]; }).map(function (s) {
+      return '<div class="item"><span class="ponto" style="background:' + s[1] + '"></span>' + s[2] + ': ' + cont[s[0]] + '</div>';
+    }).join('');
+    var linhas = prazos.map(function (a) {
+      var s = statusPrazo(a.data);
+      return '<div class="prazo-linha"><span class="quando">' + escapar(formatarData(a.data)) + '</span>' +
+        '<span class="rotulo">' + escapar(a.titulo) + '</span>' +
+        '<span class="prazo-pill" style="background:' + rgba(s.cor, 0.18) + ';color:' + s.cor + '">' + s.icone + ' ' + escapar(s.txt) + '</span></div>';
+    }).join('');
+    $('prazosBloco').innerHTML = '<div class="prazos-bloco"><h3>⏳ Prazos no período (' + total + ')</h3>' +
+      '<div class="prazos-barra">' + barra + '</div>' +
+      '<div class="prazo-legenda">' + legenda + '</div>' +
+      '<div class="prazo-lista">' + linhas + '</div></div>';
+  }
+
   function resumoTexto() {
     var faixa = faixaPeriodo(resumoPeriodoAtual);
     var lista = atividadesNoPeriodo(faixa[0], faixa[1]);

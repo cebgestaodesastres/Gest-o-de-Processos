@@ -357,11 +357,13 @@ function obterMapaColunasPor_(aba, cabecalhos) {
 
 var NOME_ABA_PLANNER = 'Planner';
 var CABECALHOS_PLANNER = ['Data', 'Data fim', 'Título', 'Descrição', 'Início', 'Fim',
-  'Categoria', 'Concluída', 'Processos SEI', 'Links', 'Notificação', 'Notificado'];
+  'Categoria', 'Concluída', 'Processos SEI', 'Links', 'Notificação', 'Notificado',
+  'Checklist', 'AgendaId'];
 var COL_PLANNER = {
   data: 'Data', dataFim: 'Data fim', titulo: 'Título', descricao: 'Descrição',
   inicio: 'Início', fim: 'Fim', categoria: 'Categoria', concluida: 'Concluída',
-  processos: 'Processos SEI', links: 'Links', notificacao: 'Notificação', notificado: 'Notificado'
+  processos: 'Processos SEI', links: 'Links', notificacao: 'Notificação', notificado: 'Notificado',
+  checklist: 'Checklist', agendaId: 'AgendaId'
 };
 
 // Antecedências aceitas no campo "Notificação" -> minutos antes do evento.
@@ -394,7 +396,8 @@ function obterAtividades() {
         concluida: ehVerdadeiro_(r[mapa[COL_PLANNER.concluida] - 1]),
         processos: deCelula_(r[mapa[COL_PLANNER.processos] - 1]),
         links: deCelula_(r[mapa[COL_PLANNER.links] - 1]),
-        notificacao: deCelula_(r[mapa[COL_PLANNER.notificacao] - 1])
+        notificacao: deCelula_(r[mapa[COL_PLANNER.notificacao] - 1]),
+        checklist: deCelula_(r[mapa[COL_PLANNER.checklist] - 1])
       });
     });
   }
@@ -439,8 +442,27 @@ function salvarAtividade(a) {
     set('links', a.links || '');
     set('notificacao', a.notificacao || '');
     set('notificado', ''); // reavalia a notificação após qualquer alteração
+    // Checklist e AgendaId são preservados (não vêm do formulário): em edição,
+    // 'row' já contém os valores atuais; em criação, ficam vazios.
 
     faixa.setValues([row]);
+    try { sincronizarLinhaParaAgenda_(aba, mapa, linha); } catch (e) { /* Agenda indisponível/não autorizada */ }
+    return obterAtividades();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Salva/atualiza o checklist de uma atividade (texto com linhas "[x] item"). */
+function atualizarChecklist(linha, checklist) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_PLANNER, CABECALHOS_PLANNER);
+    var mapa = obterMapaColunasPor_(aba, CABECALHOS_PLANNER);
+    linha = Number(linha);
+    if (!(linha >= 2)) throw new Error('Linha inválida.');
+    aba.getRange(linha, mapa[COL_PLANNER.checklist]).setValue(checklist || '');
     return obterAtividades();
   } finally {
     lock.releaseLock();
@@ -463,14 +485,22 @@ function alternarConcluidaAtividade(linha, concluida) {
   }
 }
 
-/** Exclui a atividade. */
+/** Exclui a atividade (e o evento vinculado na Agenda, se houver). */
 function excluirAtividade(linha) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var aba = obterAbaPor_(NOME_ABA_PLANNER, CABECALHOS_PLANNER);
+    var mapa = obterMapaColunasPor_(aba, CABECALHOS_PLANNER);
     linha = Number(linha);
     if (!(linha >= 2)) throw new Error('Linha inválida.');
+    var agendaId = String(aba.getRange(linha, mapa[COL_PLANNER.agendaId]).getValue() || '').trim();
+    if (agendaId) {
+      try {
+        var ev = obterAgenda_().getEventById(agendaId);
+        if (ev) ev.deleteEvent();
+      } catch (e) { /* Agenda indisponível */ }
+    }
     aba.deleteRow(linha);
     return obterAtividades();
   } finally {
@@ -575,6 +605,180 @@ function enviarEmailNotificacao_(email, r, mapa, evento, notif, tz) {
   if (links.trim()) linhas.push('', 'Links de referência:', links);
 
   MailApp.sendEmail(email, '🔔 Lembrete: ' + titulo, linhas.join('\n'));
+}
+
+/* ==========================================================================
+ * Integração com o Google Agenda (mão dupla).
+ *
+ * CONFIGURAÇÃO (uma vez, no editor do Apps Script, logado na conta que hospeda
+ * o script — ex.: ceb.gestaodesastres):
+ *   1) Rode `instalarGatilhoAgenda` — cria um gatilho que importa novos eventos
+ *      da Agenda para o Planner a cada 15 minutos (autorize o acesso à Agenda).
+ *   2) (Opcional) `definirCalendarioId('id-do-calendario')` para usar um
+ *      calendário específico; sem isso, usa a agenda principal da conta.
+ *
+ * Como funciona:
+ *   • Criar/editar no Planner  -> cria/atualiza o evento na Agenda (push no salvar).
+ *   • Criar/editar na Agenda    -> vira/atualiza atividade no Planner (pull no gatilho).
+ *   • Excluir no Planner        -> remove o evento vinculado na Agenda.
+ * O vínculo é feito pela coluna "AgendaId" (id do evento).
+ * ======================================================================== */
+
+/** Retorna o calendário a usar (CALENDAR_ID nas propriedades ou o principal). */
+function obterAgenda_() {
+  var id = PropertiesService.getScriptProperties().getProperty('CALENDAR_ID');
+  if (id) {
+    var c = CalendarApp.getCalendarById(id);
+    if (c) return c;
+  }
+  return CalendarApp.getDefaultCalendar();
+}
+
+/** Define o calendário do Google Agenda a sincronizar. */
+function definirCalendarioId(id) {
+  PropertiesService.getScriptProperties().setProperty('CALENDAR_ID', String(id || '').trim());
+  return 'Calendário definido: ' + id;
+}
+
+/** Cria/renova o gatilho de importação da Agenda (rodar uma vez). */
+function instalarGatilhoAgenda() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'sincronizarDaAgenda') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('sincronizarDaAgenda').timeBased().everyMinutes(15).create();
+  return 'Gatilho instalado: sincronizarDaAgenda a cada 15 min.';
+}
+
+/** Monta início/fim (Date) de uma atividade a partir da linha da planilha. */
+function periodoEventoDaLinha_(r, mapa) {
+  var iso = deCelula_(r[mapa[COL_PLANNER.data] - 1]);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  var isoFim = deCelula_(r[mapa[COL_PLANNER.dataFim] - 1]);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoFim) || isoFim < iso) isoFim = iso;
+  var ini = String(r[mapa[COL_PLANNER.inicio] - 1] || '').trim();
+  var fim = String(r[mapa[COL_PLANNER.fim] - 1] || '').trim();
+  var p = iso.split('-'), pf = isoFim.split('-');
+  if (/^\d{1,2}:\d{2}$/.test(ini)) {
+    var hi = Number(ini.split(':')[0]), mi = Number(ini.split(':')[1]);
+    var inicioDt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), hi, mi);
+    var fimDt;
+    if (/^\d{1,2}:\d{2}$/.test(fim)) fimDt = new Date(Number(pf[0]), Number(pf[1]) - 1, Number(pf[2]), Number(fim.split(':')[0]), Number(fim.split(':')[1]));
+    else fimDt = new Date(inicioDt.getTime() + 3600000);
+    if (fimDt <= inicioDt) fimDt = new Date(inicioDt.getTime() + 3600000);
+    return { timed: true, inicio: inicioDt, fim: fimDt };
+  }
+  // Dia inteiro: fim exclusivo = dia seguinte ao último dia.
+  var iniDia = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  var fimDia = new Date(Number(pf[0]), Number(pf[1]) - 1, Number(pf[2]) + 1);
+  return { timed: false, inicio: iniDia, fim: fimDia };
+}
+
+/** Cria/atualiza o evento da Agenda correspondente à linha e grava o AgendaId. */
+function sincronizarLinhaParaAgenda_(aba, mapa, linha) {
+  var r = aba.getRange(linha, 1, 1, aba.getLastColumn()).getValues()[0];
+  var titulo = String(r[mapa[COL_PLANNER.titulo] - 1] || '').trim();
+  if (!titulo) return;
+  var per = periodoEventoDaLinha_(r, mapa);
+  if (!per) return;
+  var descricao = String(r[mapa[COL_PLANNER.descricao] - 1] || '');
+  var agenda = obterAgenda_();
+  var agendaId = String(r[mapa[COL_PLANNER.agendaId] - 1] || '').trim();
+  var ev = null;
+  if (agendaId) { try { ev = agenda.getEventById(agendaId); } catch (e) { ev = null; } }
+
+  if (ev) {
+    ev.setTitle(titulo);
+    ev.setDescription(descricao);
+    if (per.timed) ev.setTime(per.inicio, per.fim);
+    else ev.setAllDayDates(per.inicio, per.fim);
+  } else {
+    if (per.timed) ev = agenda.createEvent(titulo, per.inicio, per.fim, { description: descricao });
+    else ev = agenda.createAllDayEvent(titulo, per.inicio, per.fim, { description: descricao });
+    aba.getRange(linha, mapa[COL_PLANNER.agendaId]).setValue(ev.getId());
+  }
+}
+
+/**
+ * Importa para o Planner os eventos da Agenda (janela: ano anterior ao próximo)
+ * que ainda não têm atividade vinculada, e atualiza os já vinculados.
+ * Chamada pelo gatilho de tempo. Retorna obterAtividades() para uso manual na UI.
+ */
+function sincronizarDaAgenda() {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(8000)) return obterAtividades();
+  try {
+    var aba = obterAbaPor_(NOME_ABA_PLANNER, CABECALHOS_PLANNER);
+    var mapa = obterMapaColunasPor_(aba, CABECALHOS_PLANNER);
+    var tz = Session.getScriptTimeZone();
+
+    // Índice AgendaId -> linha das atividades já existentes.
+    var indice = {};
+    var ultima = aba.getLastRow();
+    if (ultima >= 2) {
+      var col = aba.getRange(2, mapa[COL_PLANNER.agendaId], ultima - 1, 1).getValues();
+      col.forEach(function (v, i) { var id = String(v[0] || '').trim(); if (id) indice[id] = i + 2; });
+    }
+
+    var ano = new Date().getFullYear();
+    var eventos = obterAgenda_().getEvents(new Date(ano - 1, 0, 1), new Date(ano + 2, 0, 1));
+    eventos.forEach(function (ev) {
+      var id = ev.getId();
+      var titulo = ev.getTitle() || '(sem título)';
+      var descricao = ev.getDescription() || '';
+      var inicioDt = ev.getStartTime(), fimDt = ev.getEndTime();
+      var diaInteiro = ev.isAllDayEvent();
+      var dataIso = Utilities.formatDate(inicioDt, tz, 'yyyy-MM-dd');
+      var fimIso, horaIni = '', horaFim = '';
+      if (diaInteiro) {
+        // fim exclusivo -> último dia = fim - 1 dia
+        var ultimoDia = new Date(fimDt.getTime() - 86400000);
+        fimIso = Utilities.formatDate(ultimoDia, tz, 'yyyy-MM-dd');
+        if (fimIso < dataIso) fimIso = dataIso;
+      } else {
+        fimIso = Utilities.formatDate(fimDt, tz, 'yyyy-MM-dd');
+        horaIni = Utilities.formatDate(inicioDt, tz, 'HH:mm');
+        horaFim = Utilities.formatDate(fimDt, tz, 'HH:mm');
+      }
+      if (fimIso === dataIso) fimIso = '';
+
+      var linha = indice[id];
+      if (!linha) {
+        // Novo evento -> cria atividade no Planner.
+        linha = aba.getLastRow() + 1;
+        var row = novaLinhaVazia_(aba.getLastColumn());
+        row[mapa[COL_PLANNER.titulo] - 1] = titulo;
+        row[mapa[COL_PLANNER.categoria] - 1] = 'Geral';
+        row[mapa[COL_PLANNER.descricao] - 1] = descricao;
+        row[mapa[COL_PLANNER.inicio] - 1] = horaIni;
+        row[mapa[COL_PLANNER.fim] - 1] = horaFim;
+        row[mapa[COL_PLANNER.agendaId] - 1] = id;
+        row[mapa[COL_PLANNER.concluida] - 1] = false;
+        aba.getRange(linha, mapa[COL_PLANNER.inicio]).setNumberFormat('@');
+        aba.getRange(linha, mapa[COL_PLANNER.fim]).setNumberFormat('@');
+        aba.getRange(linha, mapa[COL_PLANNER.data]).setNumberFormat('dd/mm/yyyy');
+        aba.getRange(linha, mapa[COL_PLANNER.dataFim]).setNumberFormat('dd/mm/yyyy');
+        aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
+        aba.getRange(linha, mapa[COL_PLANNER.data]).setValue(paraCelula_(dataIso));
+        if (fimIso) aba.getRange(linha, mapa[COL_PLANNER.dataFim]).setValue(paraCelula_(fimIso));
+      } else {
+        // Evento já vinculado -> atualiza os campos principais.
+        aba.getRange(linha, mapa[COL_PLANNER.titulo]).setValue(titulo);
+        aba.getRange(linha, mapa[COL_PLANNER.descricao]).setValue(descricao);
+        aba.getRange(linha, mapa[COL_PLANNER.inicio]).setNumberFormat('@').setValue(horaIni);
+        aba.getRange(linha, mapa[COL_PLANNER.fim]).setNumberFormat('@').setValue(horaFim);
+        aba.getRange(linha, mapa[COL_PLANNER.data]).setNumberFormat('dd/mm/yyyy').setValue(paraCelula_(dataIso));
+        aba.getRange(linha, mapa[COL_PLANNER.dataFim]).setNumberFormat('dd/mm/yyyy').setValue(fimIso ? paraCelula_(fimIso) : '');
+      }
+    });
+    return obterAtividades();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Sincronização manual (botão na interface): importa da Agenda e retorna tudo. */
+function sincronizarAgendaAgora() {
+  return sincronizarDaAgenda();
 }
 
 /* ==========================================================================
