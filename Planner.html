@@ -142,6 +142,10 @@
 <div class="fundo-modal" id="fundoDoc">
   <div class="modal largo">
     <h2>Gerar documento</h2>
+    <div class="seg-toggle" id="docModo" style="margin-bottom:12px">
+      <button class="ativo" data-docmodo="template">📄 Rascunho pronto</button>
+      <button data-docmodo="skill">🧩 Resumo para skill</button>
+    </div>
     <div class="grade" style="margin-bottom:12px">
       <div class="campo">
         <label for="docTipo">Tipo de documento</label>
@@ -158,12 +162,13 @@
       </div>
     </div>
     <div class="campo largura-total">
-      <label>Prévia do documento</label>
+      <label id="docSaidaRot">Prévia do documento</label>
       <div class="doc-saida" id="docSaida"></div>
       <span class="dica" id="docDica"></span>
     </div>
     <div class="rodape">
       <button type="button" class="btn" id="docFechar">Fechar</button>
+      <button type="button" class="btn" id="docBaixar">⬇️ Baixar</button>
       <button type="button" class="btn" id="docCopiar">📋 Copiar</button>
       <button type="button" class="btn primario" id="docRegenerar">↻ Gerar novamente</button>
     </div>
@@ -570,40 +575,89 @@
   });
   $('evtGerarDoc').addEventListener('click', function () { var a = achar(eventoAberto); if (a) abrirDoc(a); });
 
-  // ----- Gerador de documento (template) -----
+  // ----- Gerador de documento: rascunho por template OU briefing para a skill -----
   var eventoDoc = null;
+  var docModo = 'template';
+
   function abrirDoc(a) {
     eventoDoc = a;
+    docModo = 'template';
+    document.querySelectorAll('#docModo button').forEach(function (b) { b.classList.toggle('ativo', b.dataset.docmodo === 'template'); });
     var sel = $('docSkill');
     var skillsDisp = (typeof skills !== 'undefined' && skills) ? skills : [];
     sel.innerHTML = '<option value="">Template padrão</option>' +
       skillsDisp.map(function (s) { return '<option value="' + escapar(s.nome) + '">Skill: ' + escapar(s.nome) + '</option>'; }).join('');
-    // pré-seleciona uma skill de OS, se houver
-    var os = skillsDisp.filter(function (s) { return /ordem|servi|os\b/i.test(s.nome); })[0];
-    if (os) { $('docTipo').value = 'Ordem de Serviço'; sel.value = os.nome; }
+    // pré-seleciona uma skill de OS/ofício, se houver
+    var os = skillsDisp.filter(function (s) { return /ordem|servi|of[ií]cio|\bos\b/i.test(s.nome); })[0];
+    if (os) sel.value = os.nome;
+    $('docTipo').value = /of[ií]cio/i.test(os ? os.nome : '') ? 'Ofício' : 'Ordem de Serviço';
     gerarDoc();
     $('fundoDoc').classList.add('aberto');
   }
-  function gerarDoc() {
-    var a = eventoDoc; if (!a) return;
-    var tipo = $('docTipo').value;
-    var skill = $('docSkill').value;
-    var hoje = formatarData(hojeIso());
-    var sei = String(a.processos || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean).join('\n   ') || '(sem processos vinculados)';
-    var refs = String(a.links || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean).join('\n   ') || '(sem referências)';
-    var corpo =
-      tipo.toUpperCase() + ' Nº ______/' + (a.data ? a.data.slice(0, 4) : new Date().getFullYear()) + '\n\n' +
+
+  function docCampos(a) {
+    return {
+      tipo: $('docTipo').value,
+      skill: $('docSkill').value,
+      hoje: formatarData(hojeIso()),
+      sei: String(a.processos || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean),
+      refs: String(a.links || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean)
+    };
+  }
+
+  function gerarTemplateTexto(a) {
+    var c = docCampos(a);
+    return c.tipo.toUpperCase() + ' Nº ______/' + (a.data ? a.data.slice(0, 4) : new Date().getFullYear()) + '\n\n' +
       'ASSUNTO: ' + (a.titulo || '') + '\n\n' +
       '1. FINALIDADE\n   ' + (a.descricao || a.titulo || '') + '\n\n' +
       '2. DATA / PERÍODO\n   ' + periodoTexto(a) + (a.inicio ? '  ·  ' + horaTexto(a) : '') + '\n\n' +
-      '3. PROCESSOS SEI RELACIONADOS\n   ' + sei + '\n\n' +
-      '4. REFERÊNCIAS\n   ' + refs + '\n\n' +
-      'Belo Horizonte, ' + hoje + '.\n\n' +
+      '3. PROCESSOS SEI RELACIONADOS\n   ' + (c.sei.join('\n   ') || '(sem processos vinculados)') + '\n\n' +
+      '4. REFERÊNCIAS\n   ' + (c.refs.join('\n   ') || '(sem referências)') + '\n\n' +
+      'Belo Horizonte, ' + c.hoje + '.\n\n' +
       '_______________________________________\n[Autoridade responsável]';
-    $('docSaida').textContent = corpo;
-    $('docDica').textContent = 'Rascunho preenchido com os dados do evento' +
-      (skill ? ' (modelo: ' + skill + ')' : '') + '. Ajuste o texto conforme necessário e use "Copiar".';
   }
+
+  function gerarBriefingTexto(a) {
+    var c = docCampos(a);
+    var alvo = c.skill ? 'a skill "' + c.skill + '"' : ('o padrão de ' + c.tipo);
+    return [
+      'Gere um documento do tipo "' + c.tipo + '" usando ' + alvo + ', com base nas informações abaixo.',
+      '',
+      'DADOS DO EVENTO (Planner CEB):',
+      '- Assunto: ' + (a.titulo || ''),
+      '- Categoria: ' + (a.categoria || ''),
+      '- Data/Período: ' + periodoTexto(a) + (a.inicio ? ' — ' + horaTexto(a) : ''),
+      '- Finalidade/Detalhes: ' + (a.descricao || a.titulo || '(não informado)'),
+      '- Local: Belo Horizonte',
+      '- Data de emissão: ' + c.hoje,
+      '- Processos SEI relacionados:' + (c.sei.length ? '\n    ' + c.sei.join('\n    ') : ' (nenhum)'),
+      '- Links de referência:' + (c.refs.length ? '\n    ' + c.refs.join('\n    ') : ' (nenhum)'),
+      '',
+      'INSTRUÇÕES: produza o documento completo no padrão da skill, preenchendo numeração, cabeçalho e autoridade responsável quando aplicável. Mantenha a linguagem formal.'
+    ].join('\n');
+  }
+
+  function gerarDoc() {
+    var a = eventoDoc; if (!a) return;
+    $('docSaida').textContent = docModo === 'skill' ? gerarBriefingTexto(a) : gerarTemplateTexto(a);
+    if (docModo === 'skill') {
+      $('docSaidaRot').textContent = 'Resumo para colar no Claude com a skill';
+      $('docDica').textContent = 'Copie ou baixe este resumo e cole aqui no Claude junto com a skill' +
+        ($('docSkill').value ? ' "' + $('docSkill').value + '"' : ' de documentos') + ' para gerar o documento no padrão.';
+    } else {
+      $('docSaidaRot').textContent = 'Prévia do documento';
+      $('docDica').textContent = 'Rascunho preenchido com os dados do evento' +
+        ($('docSkill').value ? ' (modelo: ' + $('docSkill').value + ')' : '') + '. Ajuste o texto conforme necessário e use "Copiar".';
+    }
+  }
+
+  document.querySelectorAll('#docModo button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      docModo = b.dataset.docmodo;
+      document.querySelectorAll('#docModo button').forEach(function (x) { x.classList.toggle('ativo', x === b); });
+      gerarDoc();
+    });
+  });
   $('docTipo').addEventListener('change', gerarDoc);
   $('docSkill').addEventListener('change', gerarDoc);
   $('docRegenerar').addEventListener('click', gerarDoc);
@@ -611,8 +665,19 @@
   $('fundoDoc').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
   $('docCopiar').addEventListener('click', function () {
     var txt = $('docSaida').textContent;
-    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast('Documento copiado.'); }, function () { toast('Não foi possível copiar.', true); });
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast(docModo === 'skill' ? 'Resumo copiado.' : 'Documento copiado.'); }, function () { toast('Não foi possível copiar.', true); });
     else toast('Cópia não suportada neste navegador.', true);
+  });
+  $('docBaixar').addEventListener('click', function () {
+    var a = eventoDoc; if (!a) return;
+    var slug = String(a.titulo || 'documento').replace(/[^\w\-. ]+/g, '_').trim().slice(0, 50);
+    var nome = $('docTipo').value.replace(/[^\w]+/g, '_') + '_' + slug + (docModo === 'skill' ? '_briefing' : '') + '.md';
+    var blob = new Blob([$('docSaida').textContent], { type: 'text/markdown;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var el = document.createElement('a'); el.href = url; el.download = nome;
+    document.body.appendChild(el); el.click(); document.body.removeChild(el);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    toast('Baixando "' + nome + '".');
   });
 
   // ----- Formulário de atividade -----
