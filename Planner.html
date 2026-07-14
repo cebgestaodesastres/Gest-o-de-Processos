@@ -38,6 +38,7 @@
       </div>
     </div>
   </div>
+  <div id="calTooltip" class="cal-tooltip"></div>
 </section>
 
 <!-- Drawer do dia -->
@@ -319,29 +320,52 @@
     var hoje = hojeIso();
     var html = '';
     for (var m = 0; m < 12; m++) {
-      var inicioSemana = new Date(anoRef, m, 1).getDay();
+      var primeiroDiaSemana = new Date(anoRef, m, 1).getDay();
       var diasNoMes = new Date(anoRef, m + 1, 0).getDate();
       var prefixoMes = isoData(anoRef, m, 1).slice(0, 7);
-      var qtdMes = atividades.filter(function (a) {
+      // Atividades que tocam o mês; multi-dia primeiro (empacotamento melhor).
+      var doMes = atividades.filter(function (a) {
         return ehData(a.data) && a.data.slice(0, 7) <= prefixoMes && fimDe(a).slice(0, 7) >= prefixoMes;
-      }).length;
+      }).sort(function (a, b) {
+        if (a.data !== b.data) return a.data < b.data ? -1 : 1;
+        return (fimDe(b) > b.data ? 1 : 0) - (fimDe(a) > a.data ? 1 : 0);
+      });
       var temHoje = hoje.slice(0, 7) === prefixoMes;
-      var celulas = '';
-      for (var i = 0; i < inicioSemana; i++) celulas += '<div class="mini-dia vazia"></div>';
-      for (var d = 1; d <= diasNoMes; d++) {
-        var iso = isoData(anoRef, m, d);
-        var doDia = atividadesDoDia(iso);
-        var cats = {};
-        doDia.forEach(function (a) { cats[a.categoria] = corCategoria(a.categoria); });
-        var cores = Object.keys(cats).map(function (k) { return cats[k]; }).slice(0, 3);
-        var pontos = cores.map(function (c) { return '<span class="mini-ponto" style="background:' + c + '"></span>'; }).join('');
-        celulas += '<div class="mini-dia' + (iso === hoje ? ' hoje' : '') + '" data-dia="' + iso + '">' +
-          d + '<span class="mini-pontos">' + pontos + '</span></div>';
+      var numSemanas = Math.ceil((primeiroDiaSemana + diasNoMes) / 7);
+      var semanas = '';
+      for (var w = 0; w < numSemanas; w++) {
+        var nums = '', diasCol = [];
+        for (var col = 0; col < 7; col++) {
+          var dia = w * 7 + col - primeiroDiaSemana + 1;
+          if (dia < 1 || dia > diasNoMes) { diasCol.push(null); nums += '<div class="mini-dia vazia"></div>'; }
+          else {
+            var isoD = isoData(anoRef, m, dia);
+            diasCol.push(isoD);
+            nums += '<div class="mini-dia' + (isoD === hoje ? ' hoje' : '') + '" data-dia="' + isoD + '">' + dia + '</div>';
+          }
+        }
+        // Barras: cada atividade vira um segmento que atravessa suas colunas na semana.
+        var barras = '';
+        doMes.forEach(function (a) {
+          var ini = a.data, f = fimDe(a), startCol = -1, endCol = -1;
+          for (var c = 0; c < 7; c++) {
+            var iso = diasCol[c];
+            if (iso && iso >= ini && iso <= f) { if (startCol < 0) startCol = c; endCol = c; }
+          }
+          if (startCol < 0) return;
+          var cor = corCategoria(a.categoria);
+          var rL = a.data === diasCol[startCol], rR = f === diasCol[endCol];
+          var estilo = 'grid-column:' + (startCol + 1) + '/' + (endCol + 2) + ';background:' + cor +
+            ';border-top-left-radius:' + (rL ? '3px' : 0) + ';border-bottom-left-radius:' + (rL ? '3px' : 0) +
+            ';border-top-right-radius:' + (rR ? '3px' : 0) + ';border-bottom-right-radius:' + (rR ? '3px' : 0);
+          barras += '<div class="mini-barra" style="' + estilo + '" title="' + escapar(a.titulo) + '"></div>';
+        });
+        semanas += '<div class="mini-semana-linha">' + nums + '</div><div class="mini-barras">' + barras + '</div>';
       }
       html += '<div class="mini-mes' + (temHoje ? ' tem-hoje' : '') + '" data-mes="' + m + '">' +
-        '<h4 data-mes="' + m + '">' + cap(MESES[m]) + '<span class="cont">' + (qtdMes || '') + '</span></h4>' +
+        '<h4 data-mes="' + m + '">' + cap(MESES[m]) + '<span class="cont">' + (doMes.length || '') + '</span></h4>' +
         '<div class="mini-semana"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>' +
-        '<div class="mini-dias">' + celulas + '</div></div>';
+        semanas + '</div>';
     }
     $('vistaAno').innerHTML = html;
   }
@@ -752,6 +776,56 @@
     if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast('Resumo copiado.'); }, function () { toast('Não foi possível copiar.', true); });
     else toast('Cópia não suportada neste navegador.', true);
   });
+
+  /* ----- Tooltip: resumo do dia ao passar o cursor ----- */
+  function conteudoTooltip(iso) {
+    var lista = atividadesDoDia(iso);
+    if (!lista.length) return '';
+    var p = iso.split('-');
+    var html = '<div class="tt-data">' + Number(p[2]) + ' de ' + cap(MESES[Number(p[1]) - 1]) + '</div>';
+    html += lista.map(function (a) {
+      var cor = corCategoria(a.categoria);
+      var flags = '';
+      if (a.categoria === 'Prazo' && !a.concluida) {
+        var s = statusPrazo(iso);
+        if (s) flags += '<span class="tt-flag" style="background:' + rgba(s.cor, 0.18) + ';color:' + s.cor + '">' + s.icone + ' ' + escapar(s.txt) + '</span>';
+      }
+      var pg = progressoChecklist(a.checklist);
+      if (pg.total && pg.feitos < pg.total) flags += '<span class="tt-flag" style="background:var(--surface-3);color:var(--ink-2)">▢ ' + (pg.total - pg.feitos) + ' pendente' + (pg.total - pg.feitos > 1 ? 's' : '') + '</span>';
+      if (a.concluida) flags += '<span class="tt-flag" style="background:rgba(12,163,12,.16);color:var(--good)">✅ concluída</span>';
+      return '<div class="tt-item"><span class="pt" style="background:' + cor + '"></span>' +
+        '<span>' + escapar(a.titulo) + (a.inicio ? ' · ' + escapar(a.inicio) : '') + '</span></div>' +
+        (flags ? '<div class="tt-flags">' + flags + '</div>' : '');
+    }).join('');
+    return html;
+  }
+  function posicionarTooltip(x, y) {
+    var tt = $('calTooltip'), w = tt.offsetWidth, h = tt.offsetHeight;
+    var left = x + 16, top = y + 16;
+    if (left + w > window.innerWidth - 10) left = x - w - 16;
+    if (top + h > window.innerHeight - 10) top = y - h - 16;
+    tt.style.left = Math.max(8, left) + 'px';
+    tt.style.top = Math.max(8, top) + 'px';
+  }
+  var vPlanner = document.getElementById('view-planner');
+  vPlanner.addEventListener('mouseover', function (e) {
+    var cel = e.target.closest('.mini-dia[data-dia], .cal-dia[data-dia]');
+    var tt = $('calTooltip');
+    if (!cel) return;
+    var html = conteudoTooltip(cel.dataset.dia);
+    if (!html) { tt.classList.remove('mostrar'); return; }
+    tt.innerHTML = html;
+    tt.classList.add('mostrar');
+    posicionarTooltip(e.clientX, e.clientY);
+  });
+  vPlanner.addEventListener('mousemove', function (e) {
+    var tt = $('calTooltip');
+    if (!tt.classList.contains('mostrar')) return;
+    var cel = e.target.closest('.mini-dia[data-dia], .cal-dia[data-dia]');
+    if (!cel) { tt.classList.remove('mostrar'); return; }
+    posicionarTooltip(e.clientX, e.clientY);
+  });
+  vPlanner.addEventListener('mouseleave', function () { $('calTooltip').classList.remove('mostrar'); });
 
   /* ----- Integração: inserir um processo do Controle de Processos no Planner ----- */
   function inserirProcessoNoPlanner(p) {

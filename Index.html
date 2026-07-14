@@ -282,13 +282,23 @@
   .mini-mes h4 .cont { color: var(--muted); font-size: 10.5px; font-weight: 600; min-width: 14px; text-align: right; }
   .mini-semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 3px; }
   .mini-semana span { text-align: center; font-size: 9.5px; color: var(--muted); font-weight: 700; }
-  .mini-dias { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-  .mini-dia { aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: 11px; color: var(--ink-2); border-radius: 6px; cursor: pointer; font-variant-numeric: tabular-nums; }
+  .mini-semana-linha { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .mini-dia { height: 22px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--ink-2); border-radius: 6px; cursor: pointer; font-variant-numeric: tabular-nums; }
   .mini-dia.vazia { cursor: default; }
   .mini-dia:not(.vazia):hover { background: var(--surface-2); }
   .mini-dia.hoje { background: var(--accent); color: #fff; font-weight: 700; }
-  .mini-pontos { display: flex; gap: 2px; height: 4px; align-items: center; }
-  .mini-ponto { width: 4px; height: 4px; border-radius: 50%; }
+  /* Faixa semanal de barras: eventos contínuos atravessam os dias */
+  .mini-barras { display: grid; grid-template-columns: repeat(7, 1fr); column-gap: 2px; grid-auto-rows: 4px; row-gap: 2px; margin: 2px 0 4px; min-height: 4px; max-height: 16px; overflow: hidden; }
+  .mini-barra { height: 4px; border-radius: 3px; }
+
+  /* Tooltip de resumo do dia (hover) */
+  .cal-tooltip { position: fixed; z-index: 78; max-width: 300px; background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 10px; padding: 10px 12px; box-shadow: 0 10px 28px rgba(0,0,0,.55); font-size: 12.5px; pointer-events: none; display: none; }
+  .cal-tooltip.mostrar { display: block; }
+  .cal-tooltip .tt-data { font-weight: 700; font-size: 12.5px; margin-bottom: 6px; color: var(--ink); }
+  .cal-tooltip .tt-item { display: flex; align-items: flex-start; gap: 7px; padding: 3px 0; color: var(--ink-2); }
+  .cal-tooltip .tt-item .pt { width: 8px; height: 8px; border-radius: 3px; flex: none; margin-top: 4px; }
+  .cal-tooltip .tt-flags { display: flex; flex-wrap: wrap; gap: 5px; margin: 1px 0 2px 15px; }
+  .cal-tooltip .tt-flag { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; font-weight: 700; }
 
   /* Visão mensal detalhada */
   .cal { background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden; }
