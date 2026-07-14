@@ -1019,6 +1019,24 @@ var COL_KFASES = {
   projeto: 'Projeto', fase: 'Fase', subtitulo: 'Subtítulo', inicio: 'Início', fim: 'Fim', progresso: 'Progresso', marco: 'Marco'
 };
 
+// Histórico/memória de cada projeto — registra o que foi feito, com data/hora.
+var NOME_ABA_KHIST = 'KanbanHistorico';
+var CAB_KHIST = ['Projeto', 'Quando', 'Evento'];
+var COL_KHIST = { projeto: 'Projeto', quando: 'Quando', evento: 'Evento' };
+
+function logKanban_(projeto, evento) {
+  try {
+    var aba = obterAbaPor_(NOME_ABA_KHIST, CAB_KHIST);
+    var mapa = obterMapaColunasPor_(aba, CAB_KHIST);
+    var linha = aba.getLastRow() + 1;
+    var row = novaLinhaVazia_(aba.getLastColumn());
+    row[mapa[COL_KHIST.projeto] - 1] = projeto || '';
+    row[mapa[COL_KHIST.quando] - 1] = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
+    row[mapa[COL_KHIST.evento] - 1] = evento || '';
+    aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
+  } catch (e) { /* histórico é best-effort */ }
+}
+
 /** Lê tudo do Kanban: projetos, cartões e fases. Chamado pelo cliente. */
 function obterKanban() {
   return {
@@ -1052,6 +1070,13 @@ function obterKanban() {
         fim: deCelula_(r[mapa[COL_KFASES.fim] - 1]),
         progresso: Number(r[mapa[COL_KFASES.progresso] - 1]) || 0,
         marco: ehVerdadeiro_(r[mapa[COL_KFASES.marco] - 1])
+      };
+    }),
+    historico: lerAba_(NOME_ABA_KHIST, CAB_KHIST, COL_KHIST, function (r, mapa) {
+      return {
+        projeto: deCelula_(r[mapa[COL_KHIST.projeto] - 1]),
+        quando: deCelula_(r[mapa[COL_KHIST.quando] - 1]),
+        evento: deCelula_(r[mapa[COL_KHIST.evento] - 1])
       };
     })
   };
@@ -1090,6 +1115,7 @@ function criarProjeto(nome, descricao) {
     row[mapa[COL_KPROJ.criado] - 1] = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
     row[mapa[COL_KPROJ.colunas] - 1] = COLUNAS_KANBAN_PADRAO;
     aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
+    logKanban_(nome, 'Projeto criado.');
     return obterKanban();
   } finally { lock.releaseLock(); }
 }
@@ -1107,6 +1133,7 @@ function salvarColunasProjeto(nome, colunas) {
         break;
       }
     }
+    logKanban_(nome, 'Colunas do quadro atualizadas.');
     return obterKanban();
   } finally { lock.releaseLock(); }
 }
@@ -1116,6 +1143,7 @@ function excluirProjeto(nome) {
   try {
     excluirLinhasPorProjeto_(NOME_ABA_KCARDS, CAB_KCARDS, COL_KCARDS.projeto, nome);
     excluirLinhasPorProjeto_(NOME_ABA_KFASES, CAB_KFASES, COL_KFASES.projeto, nome);
+    excluirLinhasPorProjeto_(NOME_ABA_KHIST, CAB_KHIST, COL_KHIST.projeto, nome);
     var aba = obterAbaPor_(NOME_ABA_KPROJ, CAB_KPROJ);
     var mapa = obterMapaColunasPor_(aba, CAB_KPROJ);
     var ultima = aba.getLastRow();
@@ -1155,6 +1183,7 @@ function salvarCard(c) {
     row[mapa[COL_KCARDS.etiquetas] - 1] = c.etiquetas || '';
     row[mapa[COL_KCARDS.bloqueado] - 1] = c.bloqueado ? true : false;
     aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
+    logKanban_(c.projeto, (novo ? 'Entrega criada: "' : 'Entrega atualizada: "') + (c.titulo || '') + '" — ' + (c.coluna || 'A fazer'));
     return obterKanban();
   } finally { lock.releaseLock(); }
 }
@@ -1166,7 +1195,10 @@ function moverCard(linha, coluna) {
     var mapa = obterMapaColunasPor_(aba, CAB_KCARDS);
     linha = Number(linha);
     if (!(linha >= 2)) throw new Error('Linha inválida.');
+    var tMov = aba.getRange(linha, mapa[COL_KCARDS.titulo]).getValue();
+    var pMov = aba.getRange(linha, mapa[COL_KCARDS.projeto]).getValue();
     aba.getRange(linha, mapa[COL_KCARDS.coluna]).setValue(coluna);
+    logKanban_(pMov, 'Movido "' + tMov + '" → ' + coluna);
     return obterKanban();
   } finally { lock.releaseLock(); }
 }
@@ -1175,9 +1207,13 @@ function excluirCard(linha) {
   var lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
     var aba = obterAbaPor_(NOME_ABA_KCARDS, CAB_KCARDS);
+    var mapa = obterMapaColunasPor_(aba, CAB_KCARDS);
     linha = Number(linha);
     if (!(linha >= 2)) throw new Error('Linha inválida.');
+    var tDel = aba.getRange(linha, mapa[COL_KCARDS.titulo]).getValue();
+    var pDel = aba.getRange(linha, mapa[COL_KCARDS.projeto]).getValue();
     aba.deleteRow(linha);
+    logKanban_(pDel, 'Entrega excluída: "' + tDel + '"');
     return obterKanban();
   } finally { lock.releaseLock(); }
 }
@@ -1201,6 +1237,7 @@ function salvarFase(f) {
     row[mapa[COL_KFASES.progresso] - 1] = Math.max(0, Math.min(100, Number(f.progresso) || 0));
     row[mapa[COL_KFASES.marco] - 1] = f.marco ? true : false;
     aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
+    logKanban_(f.projeto, (novo ? 'Fase criada: "' : 'Fase atualizada: "') + (f.fase || '') + '" (' + (f.inicio || '') + ' – ' + (f.fim || '') + ', ' + (Number(f.progresso) || 0) + '%)');
     return obterKanban();
   } finally { lock.releaseLock(); }
 }
@@ -1209,9 +1246,13 @@ function excluirFase(linha) {
   var lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
     var aba = obterAbaPor_(NOME_ABA_KFASES, CAB_KFASES);
+    var mapa = obterMapaColunasPor_(aba, CAB_KFASES);
     linha = Number(linha);
     if (!(linha >= 2)) throw new Error('Linha inválida.');
+    var fDel = aba.getRange(linha, mapa[COL_KFASES.fase]).getValue();
+    var pDel = aba.getRange(linha, mapa[COL_KFASES.projeto]).getValue();
     aba.deleteRow(linha);
+    logKanban_(pDel, 'Fase excluída: "' + fDel + '"');
     return obterKanban();
   } finally { lock.releaseLock(); }
 }

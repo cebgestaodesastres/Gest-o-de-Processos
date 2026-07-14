@@ -9,6 +9,7 @@
         <button data-kmodo="cronograma">📅 Gantt</button>
       </div>
       <div class="acoes">
+        <button class="btn" id="kHistBtn" style="display:none" title="Memória do projeto: tudo que foi feito, com data/hora">🕘 Histórico</button>
         <button class="btn" id="kColunasBtn" style="display:none">⚙ Colunas</button>
         <button class="btn" id="kExcluirProj" style="display:none">🗑️ Excluir projeto</button>
         <button class="btn primario" id="kNovoProj">+ Novo controle Kanban</button>
@@ -37,6 +38,7 @@
     </div>
 
     <div id="kCronograma" style="display:none">
+      <div class="gantt-proj" id="kGanttProj"></div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
         <div class="seg-toggle" id="kZoom">
           <button data-zoom="semana">Semana</button>
@@ -118,6 +120,7 @@
       </div>
       <div class="rodape">
         <button type="button" class="btn perigo" id="kcExcluir" style="margin-right:auto;display:none">Excluir</button>
+        <button type="button" class="btn" id="kcParaProc" title="Criar um processo no Controle de Processos com estes dados">📋 Enviar p/ Processos</button>
         <button type="button" class="btn" id="kcCancelar">Cancelar</button>
         <button type="submit" class="btn primario">Salvar</button>
       </div>
@@ -162,6 +165,16 @@
         <button type="submit" class="btn primario">Salvar</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Modal: histórico do projeto -->
+<div class="fundo-modal" id="fundoHist">
+  <div class="modal largo">
+    <h2 id="kHistTitulo">Histórico do projeto</h2>
+    <p class="dica" style="margin-bottom:10px">Memória do projeto: cada ação (criar/mover/editar/excluir entregas e fases) fica registrada com data e hora.</p>
+    <div class="hist-lista" id="kHistLista"></div>
+    <div class="rodape"><button type="button" class="btn" id="kHistFechar">Fechar</button></div>
   </div>
 </div>
 
@@ -230,6 +243,7 @@
     $('kCronograma').style.display = temProj && kModo === 'cronograma' ? '' : 'none';
     $('kExcluirProj').style.display = temProj ? '' : 'none';
     $('kColunasBtn').style.display = temProj ? '' : 'none';
+    $('kHistBtn').style.display = temProj ? '' : 'none';
     $('kProjSel').style.display = temProj ? '' : 'none';
     $('kProjSel').innerHTML = kanban.projetos.map(function (p) {
       return '<option value="' + escapar(p.nome) + '"' + (p.nome === projetoAtual ? ' selected' : '') + '>' + escapar(p.nome) + '</option>';
@@ -362,6 +376,7 @@
 
   // ----- Cronograma (Gantt) com zoom -----
   function renderCronograma() {
+    $('kGanttProj').innerHTML = 'Cronograma do projeto <b>' + escapar(projetoAtual || '') + '</b>';
     var fases = kanban.fases.filter(function (f) { return f.projeto === projetoAtual && ehData(f.inicio) && ehData(f.fim); })
       .sort(function (a, b) { return a.inicio < b.inicio ? -1 : a.inicio > b.inicio ? 1 : 0; });
     if (!fases.length) {
@@ -587,4 +602,45 @@
       inicio: ini, fim: fim, progresso: marco ? 100 : Number($('kfProg').value), marco: marco
     }], aplicarKanban, $('kfLinha').value ? 'Fase atualizada.' : 'Fase criada.');
   });
+
+  // ----- Histórico (memória do projeto) -----
+  function renderHist() {
+    $('kHistTitulo').textContent = 'Histórico — ' + (projetoAtual || '');
+    var lista = (kanban.historico || []).filter(function (h) { return h.projeto === projetoAtual; }).slice().reverse();
+    if (!lista.length) { $('kHistLista').innerHTML = '<div class="hist-vazio">Sem registros ainda. As ações do projeto aparecerão aqui automaticamente.</div>'; return; }
+    $('kHistLista').innerHTML = lista.map(function (h) {
+      return '<div class="hist-item"><span class="hist-quando">' + escapar(h.quando) + '</span><span class="hist-evento">' + escapar(h.evento) + '</span></div>';
+    }).join('');
+  }
+  $('kHistBtn').addEventListener('click', function () { renderHist(); $('fundoHist').classList.add('aberto'); });
+  $('kHistFechar').addEventListener('click', function () { $('fundoHist').classList.remove('aberto'); });
+  $('fundoHist').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
+
+  // ----- Integração: Kanban -> Controle de Processos -----
+  $('kcParaProc').addEventListener('click', function () {
+    if (typeof novoProcessoPreenchido !== 'function') { toast('Controle de Processos indisponível.', true); return; }
+    var dados = { descricao: $('kcTit').value.trim(), obs: $('kcDesc').value.trim(), prazo: $('kcPrazo').value || '' };
+    if (!dados.descricao) { toast('Informe o título da entrega primeiro.', true); return; }
+    $('fundoCard').classList.remove('aberto');
+    novoProcessoPreenchido(dados);
+  });
+
+  // ----- Integração: Controle de Processos -> Kanban (chamado pelo módulo Gestão) -----
+  function inserirProcessoNoKanban(p) {
+    trocarView('kanban');
+    var abrir = function () {
+      if (!kanban.projetos.length) { toast('Crie um projeto Kanban primeiro para inserir a entrega.', true); $('kNovoProj').click(); return; }
+      abrirCard(null, colsDoProjeto()[0].nome);
+      $('kcTit').value = p.descricao || (p.processo && p.processo !== '-' ? p.processo : 'Entrega');
+      $('kcPrazo').value = ehData(p.prazo) ? p.prazo : '';
+      var det = [];
+      if (p.processo && p.processo !== '-') det.push('Processo SEI: ' + p.processo);
+      if (p.link) det.push(p.link);
+      if (p.obs) det.push(p.obs);
+      $('kcDesc').value = det.join('\n');
+      $('kcTags').value = 'SEI';
+    };
+    if (!kanbanCarregado) chamarFn('obterKanban', [], function (r) { kanban = r; kanbanCarregado = true; ajustarProjetoAtual(); renderKanban(); abrir(); });
+    else abrir();
+  }
 </script>

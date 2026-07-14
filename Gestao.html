@@ -375,6 +375,7 @@
         '<td class="acoes-col">' +
           '<button class="acao" title="Editar" data-editar="' + p.linha + '">✏️</button>' +
           '<button class="acao" title="Inserir no planner" data-planner="' + p.linha + '">🗓️</button>' +
+          '<button class="acao" title="Inserir no Kanban" data-kanban="' + p.linha + '">🗃️</button>' +
           botaoArquivo +
           '<button class="acao excluir" title="Excluir" data-excluir="' + p.linha + '">🗑️</button>' +
         '</td></tr>';
@@ -409,6 +410,17 @@
     $('cProcesso').focus();
   }
   function fecharForm() { $('fundoForm').classList.remove('aberto'); }
+
+  /* Abre o formulário de novo processo já preenchido (usado ao trazer uma
+     entrega do Kanban para o Controle de Processos). Global. */
+  function novoProcessoPreenchido(dados) {
+    trocarView('processos');
+    abrirForm(null);
+    if (dados.descricao) $('cDescricao').value = dados.descricao;
+    if (dados.obs) $('cObs').value = dados.obs;
+    if (dados.prazo && ehData(dados.prazo)) $('cPrazo').value = dados.prazo;
+    toast('Revise e salve o processo.');
+  }
 
   // ---------- Eventos ----------
   $('btnNovo').addEventListener('click', function () { abrirForm(null); });
@@ -482,6 +494,12 @@
     if (btnPlanner) {
       var pp = dados.find(function (x) { return x.linha == btnPlanner.dataset.planner; });
       if (pp && typeof inserirProcessoNoPlanner === 'function') inserirProcessoNoPlanner(pp);
+      return;
+    }
+    var btnKanban = e.target.closest('[data-kanban]');
+    if (btnKanban) {
+      var pk = dados.find(function (x) { return x.linha == btnKanban.dataset.kanban; });
+      if (pk && typeof inserirProcessoNoKanban === 'function') inserirProcessoNoKanban(pk);
       return;
     }
     var btnExcluir = e.target.closest('[data-excluir]');
