@@ -1007,16 +1007,17 @@ var CAB_KPROJ = ['Nome', 'Descrição', 'Criado', 'Colunas'];
 var COL_KPROJ = { nome: 'Nome', descricao: 'Descrição', criado: 'Criado', colunas: 'Colunas' };
 
 var NOME_ABA_KCARDS = 'KanbanCards';
-var CAB_KCARDS = ['Projeto', 'Coluna', 'Título', 'Descrição', 'Prazo', 'Prioridade', 'Responsável', 'Etiquetas', 'Bloqueado'];
+var CAB_KCARDS = ['Projeto', 'Coluna', 'Título', 'Descrição', 'Prazo', 'Prioridade', 'Responsável', 'Etiquetas', 'Bloqueado', 'Id'];
 var COL_KCARDS = {
   projeto: 'Projeto', coluna: 'Coluna', titulo: 'Título', descricao: 'Descrição', prazo: 'Prazo',
-  prioridade: 'Prioridade', responsavel: 'Responsável', etiquetas: 'Etiquetas', bloqueado: 'Bloqueado'
+  prioridade: 'Prioridade', responsavel: 'Responsável', etiquetas: 'Etiquetas', bloqueado: 'Bloqueado', id: 'Id'
 };
 
+// Fases pertencem a uma ENTREGA (cartão), via CardId — o Gantt é da entrega.
 var NOME_ABA_KFASES = 'KanbanFases';
-var CAB_KFASES = ['Projeto', 'Fase', 'Subtítulo', 'Início', 'Fim', 'Progresso', 'Marco', 'Id'];
+var CAB_KFASES = ['Projeto', 'CardId', 'Fase', 'Subtítulo', 'Início', 'Fim', 'Progresso', 'Marco', 'Id'];
 var COL_KFASES = {
-  projeto: 'Projeto', fase: 'Fase', subtitulo: 'Subtítulo', inicio: 'Início', fim: 'Fim', progresso: 'Progresso', marco: 'Marco', id: 'Id'
+  projeto: 'Projeto', cardId: 'CardId', fase: 'Fase', subtitulo: 'Subtítulo', inicio: 'Início', fim: 'Fim', progresso: 'Progresso', marco: 'Marco', id: 'Id'
 };
 
 // Tarefas dentro de cada fase (hierarquia do Gantt). Vinculadas pela FaseId.
@@ -1042,6 +1043,21 @@ function garantirIdsFases_() {
   if (mudou) aba.getRange(2, col, vals.length, 1).setValues(vals);
 }
 
+/** Garante que toda entrega (cartão) tenha um Id estável (para vincular fases). */
+function garantirIdsCards_() {
+  var aba = obterAbaPor_(NOME_ABA_KCARDS, CAB_KCARDS);
+  var mapa = obterMapaColunasPor_(aba, CAB_KCARDS);
+  var ultima = aba.getLastRow();
+  if (ultima < 2) return;
+  var col = mapa[COL_KCARDS.id];
+  var vals = aba.getRange(2, col, ultima - 1, 1).getValues();
+  var mudou = false;
+  for (var i = 0; i < vals.length; i++) {
+    if (!String(vals[i][0] || '').trim()) { vals[i][0] = Utilities.getUuid(); mudou = true; }
+  }
+  if (mudou) aba.getRange(2, col, vals.length, 1).setValues(vals);
+}
+
 // Histórico/memória de cada projeto — registra o que foi feito, com data/hora.
 var NOME_ABA_KHIST = 'KanbanHistorico';
 var CAB_KHIST = ['Projeto', 'Quando', 'Evento'];
@@ -1054,6 +1070,7 @@ function logKanban_(projeto, evento) { /* intencionalmente vazio */ }
 
 /** Lê tudo do Kanban: projetos, cartões, fases e tarefas. Chamado pelo cliente. */
 function obterKanban() {
+  garantirIdsCards_();
   garantirIdsFases_();
   return {
     projetos: lerAba_(NOME_ABA_KPROJ, CAB_KPROJ, COL_KPROJ, function (r, mapa) {
@@ -1074,12 +1091,14 @@ function obterKanban() {
         prioridade: deCelula_(r[mapa[COL_KCARDS.prioridade] - 1]),
         responsavel: deCelula_(r[mapa[COL_KCARDS.responsavel] - 1]),
         etiquetas: deCelula_(r[mapa[COL_KCARDS.etiquetas] - 1]),
-        bloqueado: ehVerdadeiro_(r[mapa[COL_KCARDS.bloqueado] - 1])
+        bloqueado: ehVerdadeiro_(r[mapa[COL_KCARDS.bloqueado] - 1]),
+        id: deCelula_(r[mapa[COL_KCARDS.id] - 1])
       };
     }),
     fases: lerAba_(NOME_ABA_KFASES, CAB_KFASES, COL_KFASES, function (r, mapa) {
       return {
         projeto: deCelula_(r[mapa[COL_KFASES.projeto] - 1]),
+        cardId: deCelula_(r[mapa[COL_KFASES.cardId] - 1]),
         fase: deCelula_(r[mapa[COL_KFASES.fase] - 1]),
         subtitulo: deCelula_(r[mapa[COL_KFASES.subtitulo] - 1]),
         inicio: deCelula_(r[mapa[COL_KFASES.inicio] - 1]),
@@ -1212,6 +1231,7 @@ function salvarCard(c) {
     row[mapa[COL_KCARDS.responsavel] - 1] = c.responsavel || '';
     row[mapa[COL_KCARDS.etiquetas] - 1] = c.etiquetas || '';
     row[mapa[COL_KCARDS.bloqueado] - 1] = c.bloqueado ? true : false;
+    if (novo) row[mapa[COL_KCARDS.id] - 1] = c.id || Utilities.getUuid();
     aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
     logKanban_(c.projeto, (novo ? 'Entrega criada: "' : 'Entrega atualizada: "') + (c.titulo || '') + '" — ' + (c.coluna || 'A fazer'));
     return obterKanban();
@@ -1242,6 +1262,8 @@ function excluirCard(linha) {
     if (!(linha >= 2)) throw new Error('Linha inválida.');
     var tDel = aba.getRange(linha, mapa[COL_KCARDS.titulo]).getValue();
     var pDel = aba.getRange(linha, mapa[COL_KCARDS.projeto]).getValue();
+    var idDel = String(aba.getRange(linha, mapa[COL_KCARDS.id]).getValue() || '').trim();
+    if (idDel) excluirFasesDoCard_(idDel);
     aba.deleteRow(linha);
     logKanban_(pDel, 'Entrega excluída: "' + tDel + '"');
     return obterKanban();
@@ -1260,6 +1282,7 @@ function salvarFase(f) {
     aba.getRange(linha, mapa[COL_KFASES.fim]).setNumberFormat('dd/mm/yyyy');
     var row = novo ? novaLinhaVazia_(aba.getLastColumn()) : aba.getRange(linha, 1, 1, aba.getLastColumn()).getValues()[0];
     row[mapa[COL_KFASES.projeto] - 1] = f.projeto || '';
+    if (novo) row[mapa[COL_KFASES.cardId] - 1] = f.cardId || '';
     row[mapa[COL_KFASES.fase] - 1] = f.fase || '';
     row[mapa[COL_KFASES.subtitulo] - 1] = f.subtitulo || '';
     row[mapa[COL_KFASES.inicio] - 1] = f.inicio ? paraCelula_(f.inicio) : '';
@@ -1338,5 +1361,19 @@ function excluirTarefasDaFase_(faseId) {
   var ultima = aba.getLastRow();
   for (var l = ultima; l >= 2; l--) {
     if (String(aba.getRange(l, mapa[COL_KTAR.faseId]).getValue()).trim() === String(faseId).trim()) aba.deleteRow(l);
+  }
+}
+
+/** Exclui todas as fases de uma entrega (e suas tarefas) — cascata ao excluir o cartão. */
+function excluirFasesDoCard_(cardId) {
+  var aba = obterAbaPor_(NOME_ABA_KFASES, CAB_KFASES);
+  var mapa = obterMapaColunasPor_(aba, CAB_KFASES);
+  var ultima = aba.getLastRow();
+  for (var l = ultima; l >= 2; l--) {
+    if (String(aba.getRange(l, mapa[COL_KFASES.cardId]).getValue()).trim() === String(cardId).trim()) {
+      var fid = String(aba.getRange(l, mapa[COL_KFASES.id]).getValue() || '').trim();
+      if (fid) excluirTarefasDaFase_(fid);
+      aba.deleteRow(l);
+    }
   }
 }

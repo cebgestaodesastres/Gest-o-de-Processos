@@ -4,12 +4,7 @@
     <div class="kanban-topo">
       <h1>Kanban</h1>
       <select class="proj-sel" id="kProjSel" title="Projeto"></select>
-      <div class="seg-toggle" id="kModo">
-        <button class="ativo" data-kmodo="quadro">📋 Quadro</button>
-        <button data-kmodo="cronograma">📅 Gantt</button>
-      </div>
       <div class="acoes">
-        <button class="btn" id="kHistBtn" style="display:none" title="Panorama do projeto: fases, tarefas, prazos e progresso">📋 Panorama</button>
         <button class="btn" id="kColunasBtn" style="display:none">⚙ Colunas</button>
         <button class="btn" id="kExcluirProj" style="display:none">🗑️ Excluir projeto</button>
         <button class="btn primario" id="kNovoProj">+ Novo controle Kanban</button>
@@ -19,9 +14,10 @@
 
     <div id="kVazio" class="kanban-vazio" style="display:none">
       <strong>Nenhum projeto ainda.</strong>
-      Crie um "Novo controle Kanban" para organizar as entregas por status e montar o cronograma (Gantt) por fases.
+      Crie um "Novo controle Kanban" para organizar as entregas. Cada entrega pode ter o seu próprio cronograma (Gantt) por fases.
     </div>
 
+    <!-- Quadro (entregas) -->
     <div id="kQuadro">
       <div class="kb-toolbar" id="kToolbar">
         <input type="search" class="busca" id="kBusca" placeholder="Buscar entrega, responsável, etiqueta…">
@@ -37,17 +33,22 @@
       <div class="kb-board" id="kBoard"></div>
     </div>
 
+    <!-- Cronograma (Gantt) de UMA entrega -->
     <div id="kCronograma" style="display:none">
-      <div class="gantt-proj" id="kGanttProj"></div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-        <div class="seg-toggle" id="kZoom">
-          <button data-zoom="semana">Semana</button>
-          <button class="ativo" data-zoom="mes">Mês</button>
-          <button data-zoom="ano">Ano</button>
+      <div class="cron-cab">
+        <button class="btn" id="kVoltarQuadro">← Voltar ao quadro</button>
+        <div class="cron-titulo" id="kCronTitulo"></div>
+        <div class="acoes" style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap">
+          <div class="seg-toggle" id="kZoom">
+            <button data-zoom="semana">Semana</button>
+            <button class="ativo" data-zoom="mes">Mês</button>
+            <button data-zoom="ano">Ano</button>
+          </div>
+          <button class="btn" id="kHistBtn" title="Panorama desta entrega: fases, tarefas, prazos e progresso">📋 Panorama</button>
+          <button class="btn primario" id="kNovaFase">+ Nova fase</button>
         </div>
-        <span class="dica">Cada fase é uma barra no tempo (ou um marco ◆), com % concluído e a linha de hoje.</span>
-        <button class="btn" id="kNovaFase" style="margin-left:auto">+ Nova fase</button>
       </div>
+      <div class="gantt-proj" id="kGanttProj"></div>
       <div id="kGantt"></div>
     </div>
   </div>
@@ -172,7 +173,7 @@
 <div class="fundo-modal" id="fundoHist">
   <div class="modal largo">
     <h2 id="kHistTitulo">Panorama do projeto</h2>
-    <p class="dica" style="margin-bottom:12px">Visão geral do que o projeto contém: fases, tarefas, prazos e progresso — para entender rapidamente o contexto.</p>
+    <p class="dica" style="margin-bottom:12px">Visão geral desta entrega: fases, tarefas, prazos e progresso — para entender rapidamente o contexto.</p>
     <div id="kHistLista"></div>
     <div class="rodape">
       <button type="button" class="btn" id="kHistFechar">Fechar</button>
@@ -273,10 +274,12 @@
   var kanban = { projetos: [], cards: [], fases: [] };
   var kanbanCarregado = false;
   var projetoAtual = null;
-  var kModo = 'quadro';
+  var kModo = 'quadro';      // 'quadro' | 'gantt' (cronograma de uma entrega)
+  var cardAtual = null;      // id da entrega cujo cronograma está aberto
   var zoomGantt = 'mes';
   var fasesAbertas = {}; // faseId -> false quando recolhida (padrão: aberta)
   function estaAberta(id) { return fasesAbertas[id] !== false; }
+  function cardAtualObj() { return (kanban.cards || []).filter(function (c) { return c.id === cardAtual; })[0]; }
 
   function isoToDate(iso) { var p = iso.split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])); }
   function fmtIso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
@@ -311,11 +314,11 @@
   function renderKanban() {
     var temProj = kanban.projetos.length > 0;
     $('kVazio').style.display = temProj ? 'none' : '';
+    if (kModo === 'gantt' && !cardAtualObj()) kModo = 'quadro';
     $('kQuadro').style.display = temProj && kModo === 'quadro' ? '' : 'none';
-    $('kCronograma').style.display = temProj && kModo === 'cronograma' ? '' : 'none';
+    $('kCronograma').style.display = temProj && kModo === 'gantt' ? '' : 'none';
     $('kExcluirProj').style.display = temProj ? '' : 'none';
     $('kColunasBtn').style.display = temProj ? '' : 'none';
-    $('kHistBtn').style.display = temProj ? '' : 'none';
     $('kProjSel').style.display = temProj ? '' : 'none';
     $('kProjSel').innerHTML = kanban.projetos.map(function (p) {
       return '<option value="' + escapar(p.nome) + '"' + (p.nome === projetoAtual ? ' selected' : '') + '>' + escapar(p.nome) + '</option>';
@@ -330,8 +333,11 @@
     $('kFiltroResp').innerHTML = '<option value="">Todos responsáveis</option>' +
       Object.keys(resps).sort().map(function (r) { return '<option value="' + escapar(r) + '">' + escapar(r) + '</option>'; }).join('');
     $('kFiltroResp').value = valResp;
-    if (kModo === 'quadro') renderQuadro(); else renderCronograma();
+    if (kModo === 'gantt') renderCronograma(); else renderQuadro();
   }
+  function abrirCardGantt(cardId) { cardAtual = cardId; kModo = 'gantt'; renderKanban(); }
+  function voltarQuadro() { kModo = 'quadro'; cardAtual = null; renderKanban(); }
+  $('kVoltarQuadro').addEventListener('click', voltarQuadro);
 
   // ----- Quadro -----
   function passaFiltro(c) {
@@ -380,10 +386,15 @@
         if (c.bloqueado) chips += '<span class="kb-bloq">🚫 Bloqueado</span>';
         chips += chipPrazo(c.prazo) + tags;
         var avatar = c.responsavel ? '<span class="kb-avatar" title="' + escapar(c.responsavel) + '">' + escapar(iniciais(c.responsavel)) + '</span>' : '';
-        return '<div class="kb-card' + (c.bloqueado ? ' bloq' : '') + '" draggable="true" data-linha="' + c.linha + '" style="border-left-color:' + corP + '">' +
+        var fasesCard = (kanban.fases || []).filter(function (x) { return c.id && x.cardId === c.id; });
+        var progC = fasesCard.filter(function (x) { return !x.marco; });
+        var avgC = progC.length ? Math.round(progC.reduce(function (a, x) { return a + (x.progresso || 0); }, 0) / progC.length) : 0;
+        var cronLabel = fasesCard.length ? ('📅 Cronograma · ' + fasesCard.length + ' fase' + (fasesCard.length > 1 ? 's' : '') + ' · ' + avgC + '%') : '📅 Abrir cronograma';
+        return '<div class="kb-card' + (c.bloqueado ? ' bloq' : '') + (fasesCard.length ? ' tem-cron' : '') + '" draggable="true" data-linha="' + c.linha + '" style="border-left-color:' + corP + '">' +
           '<div class="titulo">' + escapar(c.titulo) + '</div>' +
           (c.descricao ? '<div class="desc">' + escapar(c.descricao) + '</div>' : '') +
           (chips ? '<div class="kb-chips">' + chips + '</div>' : '') +
+          '<button class="kb-cron" data-cron="' + escapar(c.id) + '">' + cronLabel + '</button>' +
           '<div class="rodape">' + avatar +
             '<span class="dir"><span class="mover">' +
               '<button title="Mover para a esquerda" data-mov="-1" data-linha="' + c.linha + '">‹</button>' +
@@ -417,6 +428,8 @@
       if (novo !== idx) chamarFn('moverCard', [Number(c.linha), nomes[novo]], aplicarKanban);
       return;
     }
+    var cron = e.target.closest('[data-cron]');
+    if (cron) { abrirCardGantt(cron.dataset.cron); return; }
     var card = e.target.closest('.kb-card');
     if (card) { var cc = kanban.cards.filter(function (x) { return x.linha == card.dataset.linha; })[0]; if (cc) abrirCard(cc); }
   });
@@ -447,19 +460,26 @@
   });
 
   // ----- Cronograma (Gantt) com zoom -----
+  function fasesDaEntrega() {
+    return (kanban.fases || []).filter(function (f) { return f.cardId && f.cardId === cardAtual; });
+  }
   function renderCronograma() {
-    $('kGanttProj').innerHTML = '🔗 Cronograma vinculado ao projeto <b>' + escapar(projetoAtual || '') + '</b>';
-    var fases = kanban.fases.filter(function (f) { return f.projeto === projetoAtual && ehData(f.inicio) && ehData(f.fim); })
+    var co = cardAtualObj();
+    var titulo = co ? co.titulo : '';
+    $('kCronTitulo').textContent = titulo;
+    $('kGanttProj').innerHTML = '🔗 Cronograma da entrega <b>' + escapar(titulo) + '</b>';
+    var fases = fasesDaEntrega().filter(function (f) { return ehData(f.inicio) && ehData(f.fim); })
       .sort(function (a, b) { return a.inicio < b.inicio ? -1 : a.inicio > b.inicio ? 1 : 0; });
     if (!fases.length) {
-      $('kGantt').innerHTML = '<div class="gantt-vazio">Nenhuma fase ainda. Clique em <strong>+ Nova fase</strong> para montar o cronograma (ex.: “Levantar referências” até 30/08, “Testes iniciais” em setembro, “Integração” em outubro…).</div>';
+      $('kGantt').innerHTML = '<div class="gantt-vazio">Esta entrega ainda não tem fases. Clique em <strong>+ Nova fase</strong> para montar o cronograma (ex.: “Levantar referências” até 30/08, depois “Testes”, “Integração”…).</div>';
       return;
     }
+    var faseIds = {}; fases.forEach(function (f) { faseIds[f.id] = 1; });
     var minIni = fases.reduce(function (m, f) { return f.inicio < m ? f.inicio : m; }, fases[0].inicio);
     var maxFim = fases.reduce(function (m, f) { return f.fim > m ? f.fim : m; }, fases[0].fim);
-    // inclui as tarefas do projeto no intervalo do eixo
+    // inclui as tarefas desta entrega no intervalo do eixo
     (kanban.tarefas || []).forEach(function (t) {
-      if (t.projeto !== projetoAtual || !ehData(t.inicio) || !ehData(t.fim)) return;
+      if (!faseIds[t.faseId] || !ehData(t.inicio) || !ehData(t.fim)) return;
       if (t.inicio < minIni) minIni = t.inicio;
       if (t.fim > maxFim) maxFim = t.fim;
     });
@@ -605,14 +625,7 @@
   });
 
   // ----- Alternância de modo / projeto -----
-  document.querySelectorAll('#kModo button').forEach(function (b) {
-    b.addEventListener('click', function () {
-      kModo = b.dataset.kmodo;
-      document.querySelectorAll('#kModo button').forEach(function (x) { x.classList.toggle('ativo', x === b); });
-      renderKanban();
-    });
-  });
-  $('kProjSel').addEventListener('change', function () { projetoAtual = this.value; renderKanban(); });
+  $('kProjSel').addEventListener('change', function () { projetoAtual = this.value; kModo = 'quadro'; cardAtual = null; renderKanban(); });
 
   // ----- Projeto: novo / excluir -----
   $('kNovoProj').addEventListener('click', function () { $('kpNome').value = ''; $('kpDesc').value = ''; $('fundoProj').classList.add('aberto'); $('kpNome').focus(); });
@@ -741,7 +754,7 @@
     if (fim < ini) { toast('O fim é anterior ao início.', true); return; }
     $('fundoFase').classList.remove('aberto');
     chamarFn('salvarFase', [{
-      linha: $('kfLinha').value || null, projeto: projetoAtual, fase: nome, subtitulo: $('kfSub').value.trim(),
+      linha: $('kfLinha').value || null, projeto: projetoAtual, cardId: cardAtual, fase: nome, subtitulo: $('kfSub').value.trim(),
       inicio: ini, fim: fim, progresso: marco ? 100 : Number($('kfProg').value), marco: marco
     }], aplicarKanban, $('kfLinha').value ? 'Fase atualizada.' : 'Fase criada.');
   });
@@ -755,23 +768,23 @@
     return { t: 'Em dia', c: '#2f6fed' };
   }
   function dadosPanorama() {
-    var fases = (kanban.fases || []).filter(function (f) { return f.projeto === projetoAtual; })
-      .sort(function (a, b) { return (a.inicio || '') < (b.inicio || '') ? -1 : 1; });
-    var tarefas = (kanban.tarefas || []).filter(function (t) { return t.projeto === projetoAtual; });
-    var cards = (kanban.cards || []).filter(function (c) { return c.projeto === projetoAtual; });
+    var fases = fasesDaEntrega().sort(function (a, b) { return (a.inicio || '') < (b.inicio || '') ? -1 : 1; });
+    var faseIds = {}; fases.forEach(function (f) { faseIds[f.id] = 1; });
+    var tarefas = (kanban.tarefas || []).filter(function (t) { return faseIds[t.faseId]; });
     var comProg = fases.filter(function (f) { return !f.marco; });
     var geral = comProg.length ? Math.round(comProg.reduce(function (a, f) { return a + (f.progresso || 0); }, 0) / comProg.length) : 0;
     var comData = fases.filter(function (f) { return ehData(f.inicio) && ehData(f.fim); });
     var minI = comData.reduce(function (m, f) { return (!m || f.inicio < m) ? f.inicio : m; }, '');
     var maxF = comData.reduce(function (m, f) { return (!m || f.fim > m) ? f.fim : m; }, '');
     var vencidas = fases.filter(function (f) { return !f.marco && f.progresso < 100 && ehData(f.fim) && diasAte(f.fim) < 0; }).length;
-    return { fases: fases, tarefas: tarefas, cards: cards, geral: geral, minI: minI, maxF: maxF, vencidas: vencidas };
+    return { fases: fases, tarefas: tarefas, geral: geral, minI: minI, maxF: maxF, vencidas: vencidas };
   }
   function renderPanorama() {
-    $('kHistTitulo').textContent = 'Panorama — ' + (projetoAtual || '');
+    var co = cardAtualObj();
+    $('kHistTitulo').textContent = 'Panorama — ' + (co ? co.titulo : '');
     var d = dadosPanorama();
     function tile(r, v) { return '<div class="pan-tile"><div class="r">' + r + '</div><div class="v">' + v + '</div></div>'; }
-    var tiles = tile('Fases', d.fases.length) + tile('Tarefas', d.tarefas.length) + tile('Entregas', d.cards.length) +
+    var tiles = tile('Fases', d.fases.length) + tile('Tarefas', d.tarefas.length) +
       tile('Progresso', d.geral + '%') + tile('Período', (d.minI ? formatarData(d.minI) : '—') + ' – ' + (d.maxF ? formatarData(d.maxF) : '—')) +
       tile('Prazos vencidos', d.vencidas);
     var lista = d.fases.length ? d.fases.map(function (f, i) {
@@ -793,7 +806,8 @@
   }
   function panoramaTexto() {
     var d = dadosPanorama();
-    var l = ['PANORAMA — ' + projetoAtual, 'Fases: ' + d.fases.length + ' | Tarefas: ' + d.tarefas.length + ' | Entregas: ' + d.cards.length + ' | Progresso geral: ' + d.geral + '%',
+    var co = cardAtualObj();
+    var l = ['PANORAMA — ' + (co ? co.titulo : ''), 'Fases: ' + d.fases.length + ' | Tarefas: ' + d.tarefas.length + ' | Progresso geral: ' + d.geral + '%',
       'Período: ' + (d.minI ? formatarData(d.minI) : '—') + ' a ' + (d.maxF ? formatarData(d.maxF) : '—') + ' | Prazos vencidos: ' + d.vencidas, ''];
     d.fases.forEach(function (f) {
       var st = statusFase(f);
