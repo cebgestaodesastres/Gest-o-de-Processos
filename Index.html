@@ -5,15 +5,15 @@
 <base target="_top">
 <style>
   :root {
-    --page: #eef2f8;          /* fundo azul-acinzentado bem claro */
-    --surface: #ffffff;       /* cartões */
-    --surface-2: #eaf0f8;     /* realce suave */
-    --surface-3: #dde5f0;     /* hover / trilhos */
-    --ink: #14202e;           /* texto principal (quase-navy) */
-    --ink-2: #43536a;         /* texto secundário */
-    --muted: #7c8aa0;         /* apoio */
-    --hairline: rgba(20, 40, 70, 0.12);
-    --accent: #2f6fed;        /* azul familiar */
+    --page: #e8ddce;          /* fundo nude / bege claro */
+    --surface: #faf5ee;       /* cartões (creme) */
+    --surface-2: #f1e7d8;     /* realce suave */
+    --surface-3: #e6d8c4;     /* hover / trilhos */
+    --ink: #302620;           /* texto principal (marrom-carvão) */
+    --ink-2: #5f5346;         /* texto secundário */
+    --muted: #9a8b76;         /* apoio */
+    --hairline: rgba(85, 62, 35, 0.16);
+    --accent: #2f6fed;        /* azul familiar (acento) */
     --accent-suave: rgba(47, 111, 237, 0.12);
     --good: #12a150;
     --warning: #b7791f;
@@ -59,14 +59,14 @@
 
   /* ---------- Modal (compartilhado) ---------- */
   .fundo-modal {
-    position: fixed; inset: 0; background: rgba(20, 40, 70, 0.34); display: none;
+    position: fixed; inset: 0; background: rgba(70, 52, 30, 0.34); display: none;
     align-items: flex-start; justify-content: center; padding: 5vh 16px; z-index: 80;
   }
   .fundo-modal.aberto { display: flex; }
   .modal {
     background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
     width: 100%; max-width: 620px; padding: 22px; max-height: 90vh; overflow-y: auto;
-    box-shadow: 0 18px 48px rgba(20,40,70,.20);
+    box-shadow: 0 18px 48px rgba(70,52,30,.20);
   }
   .modal h2 { font-size: 16px; margin-bottom: 16px; }
   .modal .grade { display: grid; grid-template-columns: 1fr 1fr; gap: 11px 12px; }
@@ -83,15 +83,15 @@
   /* ---------- Toast / carregando (compartilhado) ---------- */
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-    background: #14202e; border: 1px solid rgba(255,255,255,.12); color: #fff;
+    background: #302620; border: 1px solid rgba(255,255,255,.12); color: #fdf7ee;
     padding: 10px 18px; border-radius: 10px; font-size: 13.5px; opacity: 0;
-    box-shadow: 0 8px 24px rgba(20,40,70,.22);
+    box-shadow: 0 8px 24px rgba(70,52,30,.22);
     transition: all .25s ease; z-index: 100; pointer-events: none;
   }
   #toast.mostrar { opacity: 1; transform: translateX(-50%) translateY(0); }
   #toast.erro { border-color: var(--critical); }
   #carregando {
-    position: fixed; inset: 0; background: rgba(238, 242, 248, 0.72); z-index: 90;
+    position: fixed; inset: 0; background: rgba(232, 221, 206, 0.72); z-index: 90;
     display: none; align-items: center; justify-content: center; color: var(--ink-2); gap: 10px;
   }
   #carregando.ativo { display: flex; }
@@ -136,13 +136,13 @@
     width: 38px; height: 38px; border-radius: 9px; font-size: 17px; cursor: pointer;
   }
   .topbar-mobile .titulo-mobile { font-size: 15px; font-weight: 700; }
-  .fundo-sidebar { position: fixed; inset: 0; background: rgba(20,40,70,.34); z-index: 59; display: none; }
+  .fundo-sidebar { position: fixed; inset: 0; background: rgba(70,52,30,.34); z-index: 59; display: none; }
   .fundo-sidebar.aberto { display: block; }
 
   @media (max-width: 900px) {
     .sidebar {
       position: fixed; left: 0; top: 0; transform: translateX(-100%);
-      transition: transform .2s ease; box-shadow: 2px 0 24px rgba(20,40,70,.18);
+      transition: transform .2s ease; box-shadow: 2px 0 24px rgba(70,52,30,.18);
     }
     .sidebar.aberta { transform: translateX(0); }
     .topbar-mobile { display: flex; }
@@ -184,7 +184,7 @@
     position: sticky; top: 0; background: var(--surface); z-index: 1;
   }
   th:hover { color: var(--ink-2); }
-  tbody tr:hover { background: rgba(20, 40, 70, 0.03); }
+  tbody tr:hover { background: rgba(70, 52, 30, 0.03); }
   td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
   td .proc { font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   td .desc { color: var(--ink); overflow-wrap: anywhere; }
@@ -200,7 +200,7 @@
 
   th.acoes-col, td.acoes-col {
     position: sticky; right: 0; background: var(--surface); z-index: 2;
-    box-shadow: -10px 0 10px -8px rgba(20, 40, 70, 0.16); white-space: nowrap;
+    box-shadow: -10px 0 10px -8px rgba(70, 52, 30, 0.16); white-space: nowrap;
   }
   th.acoes-col { z-index: 3; }
   tbody tr:hover td.acoes-col { background: var(--surface-2); }
@@ -303,7 +303,7 @@
   .mini-barra { height: 4px; border-radius: 3px; }
 
   /* Tooltip de resumo do dia (hover) */
-  .cal-tooltip { position: fixed; z-index: 78; max-width: 300px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(20,40,70,.16); font-size: 12.5px; pointer-events: none; display: none; }
+  .cal-tooltip { position: fixed; z-index: 78; max-width: 300px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(70,52,30,.16); font-size: 12.5px; pointer-events: none; display: none; }
   .cal-tooltip.mostrar { display: block; }
   .cal-tooltip .tt-data { font-weight: 700; font-size: 12.5px; margin-bottom: 6px; color: var(--ink); }
   .cal-tooltip .tt-item { display: flex; align-items: flex-start; gap: 7px; padding: 3px 0; color: var(--ink-2); }
@@ -319,7 +319,7 @@
   .cal-dia { min-height: 118px; border-right: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); padding: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 5px; transition: background .12s ease; }
   .cal-dia:nth-child(7n) { border-right: none; }
   .cal-dia:hover { background: var(--surface-2); }
-  .cal-dia.fora { background: rgba(20,40,70,.025); }
+  .cal-dia.fora { background: rgba(70,52,30,.025); }
   .cal-dia.fora .cal-num { color: var(--muted); opacity: .5; }
   .cal-num { font-size: 12.5px; font-weight: 600; color: var(--ink-2); align-self: flex-start; width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; }
   .cal-dia.hoje .cal-num { background: var(--accent); color: #fff; }
@@ -327,9 +327,9 @@
   .cal-chip.feito { opacity: .55; text-decoration: line-through; }
   .cal-mais { font-size: 11px; color: var(--muted); font-weight: 600; padding-left: 4px; }
 
-  .drawer-fundo { position: fixed; inset: 0; background: rgba(20,40,70,.34); z-index: 70; display: none; }
+  .drawer-fundo { position: fixed; inset: 0; background: rgba(70,52,30,.34); z-index: 70; display: none; }
   .drawer-fundo.aberto { display: block; }
-  .drawer { position: fixed; top: 0; right: 0; height: 100vh; width: 400px; max-width: 92vw; background: var(--surface); border-left: 1px solid var(--hairline); z-index: 71; transform: translateX(100%); transition: transform .2s ease; display: flex; flex-direction: column; box-shadow: -12px 0 30px rgba(20,40,70,.14); }
+  .drawer { position: fixed; top: 0; right: 0; height: 100vh; width: 400px; max-width: 92vw; background: var(--surface); border-left: 1px solid var(--hairline); z-index: 71; transform: translateX(100%); transition: transform .2s ease; display: flex; flex-direction: column; box-shadow: -12px 0 30px rgba(70,52,30,.14); }
   .drawer.aberto { transform: translateX(0); }
   .drawer-topo { display: flex; align-items: center; gap: 10px; padding: 18px 20px; border-bottom: 1px solid var(--hairline); }
   .drawer-topo .dia-txt { font-size: 16px; font-weight: 700; }
