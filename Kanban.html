@@ -178,6 +178,54 @@
   </div>
 </div>
 
+<!-- Modal: tarefa (dentro de uma fase) -->
+<div class="fundo-modal" id="fundoTarefa">
+  <div class="modal">
+    <h2 id="ktTitulo">Nova tarefa</h2>
+    <form id="formTarefa">
+      <input type="hidden" id="ktLinha">
+      <input type="hidden" id="ktFaseId">
+      <div class="grade">
+        <div class="campo largura-total">
+          <label for="ktNome">Tarefa</label>
+          <input id="ktNome" required placeholder="Ex.: 1.1 Avaliação das necessidades institucionais">
+        </div>
+        <div class="campo">
+          <label for="ktIni">Início</label>
+          <input type="date" id="ktIni" required>
+        </div>
+        <div class="campo">
+          <label for="ktFim">Fim (prazo)</label>
+          <input type="date" id="ktFim" required>
+        </div>
+        <div class="campo">
+          <label for="ktResp">Responsável</label>
+          <input id="ktResp" placeholder="Ex.: Cap Gomes">
+        </div>
+        <div class="campo">
+          <label for="ktStatus">Status</label>
+          <select id="ktStatus">
+            <option value="">—</option>
+            <option value="A fazer">A fazer</option>
+            <option value="Em andamento">Em andamento</option>
+            <option value="Concluída">Concluída</option>
+            <option value="Atrasada">Atrasada</option>
+          </select>
+        </div>
+        <div class="campo largura-total">
+          <label for="ktProg">Progresso: <span id="ktProgVal">0%</span></label>
+          <input type="range" id="ktProg" min="0" max="100" step="5" value="0">
+        </div>
+      </div>
+      <div class="rodape">
+        <button type="button" class="btn perigo" id="ktExcluir" style="margin-right:auto;display:none">Excluir</button>
+        <button type="button" class="btn" id="ktCancelar">Cancelar</button>
+        <button type="submit" class="btn primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Modal: colunas -->
 <div class="fundo-modal" id="fundoColunas">
   <div class="modal">
@@ -205,6 +253,8 @@
   var projetoAtual = null;
   var kModo = 'quadro';
   var zoomGantt = 'mes';
+  var fasesAbertas = {}; // faseId -> false quando recolhida (padrão: aberta)
+  function estaAberta(id) { return fasesAbertas[id] !== false; }
 
   function isoToDate(iso) { var p = iso.split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])); }
   function fmtIso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
@@ -385,6 +435,12 @@
     }
     var minIni = fases.reduce(function (m, f) { return f.inicio < m ? f.inicio : m; }, fases[0].inicio);
     var maxFim = fases.reduce(function (m, f) { return f.fim > m ? f.fim : m; }, fases[0].fim);
+    // inclui as tarefas do projeto no intervalo do eixo
+    (kanban.tarefas || []).forEach(function (t) {
+      if (t.projeto !== projetoAtual || !ehData(t.inicio) || !ehData(t.fim)) return;
+      if (t.inicio < minIni) minIni = t.inicio;
+      if (t.fim > maxFim) maxFim = t.fim;
+    });
     var di = isoToDate(minIni), dfim = isoToDate(maxFim), start, end;
     if (zoomGantt === 'semana') {
       start = new Date(di); start.setDate(di.getDate() - di.getDay());
@@ -422,10 +478,14 @@
     var html = '<div class="gantt-scroll"><div class="gantt-inner" style="width:' + (labelW + trackW) + 'px">';
     html += '<div class="g-row g-head"><div class="g-label" style="width:' + labelW + 'px">Fase</div>' +
       '<div class="g-track" style="width:' + trackW + 'px"><div class="g-axis">' + eixoHtml + '</div></div></div>';
-    html += fases.map(function (f, i) {
+    fases.forEach(function (f, i) {
       var cor = CORES_GANTT[i % CORES_GANTT.length];
       var prog = Math.max(0, Math.min(100, f.progresso));
       var venceu = diasAte(f.fim) < 0 && prog < 100 && !f.marco;
+      var tarefas = (kanban.tarefas || []).filter(function (t) { return f.id && t.faseId === f.id; })
+        .sort(function (a, b) { return (a.inicio || '') < (b.inicio || '') ? -1 : 1; });
+      var aberta = estaAberta(f.id);
+
       var barra, externo;
       if (f.marco) {
         var xm = diasEntre(startIso, f.fim) * dia;
@@ -434,24 +494,85 @@
       } else {
         var left = diasEntre(startIso, f.inicio) * dia;
         var w = (diasEntre(f.inicio, f.fim) + 1) * dia;
-        barra = '<div class="g-bar" data-fase="' + f.linha + '" style="left:' + left + 'px;width:' + w + 'px;background:' + cor + '">' +
-          '<div class="g-prog" style="width:' + prog + '%"></div></div>';
-        // percentual SEMPRE visível, logo após a barra (fora dela, não corta)
+        barra = '<div class="g-bar" data-fase="' + f.linha + '" style="left:' + left + 'px;width:' + w + 'px;background:' + cor + '"><div class="g-prog" style="width:' + prog + '%"></div></div>';
         externo = '<span class="g-pct" style="left:' + (left + w + 6) + 'px">' + prog + '%' + (venceu ? ' ⚠' : '') + '</span>';
       }
+      var toggle = tarefas.length ? '<button class="g-toggle" data-toggle="' + escapar(f.id) + '">' + (aberta ? '▾' : '▸') + '</button>' : '<span class="g-toggle-vazio"></span>';
+      var addBtn = f.marco ? '' : '<button class="g-addtar" data-addtar="' + escapar(f.id) + '" title="Adicionar tarefa">＋</button>';
       var datas = f.marco ? ('◆ ' + formatarData(f.fim) + ' · marco') : (formatarData(f.inicio) + ' – ' + formatarData(f.fim));
-      return '<div class="g-row"><div class="g-label" style="width:' + labelW + 'px;border-left:4px solid ' + cor + ';padding-left:9px">' +
-        '<div class="nome" data-fase="' + f.linha + '">' + escapar(f.fase) + '</div>' +
+      var contTar = tarefas.length ? ' · ' + tarefas.length + ' tarefa' + (tarefas.length > 1 ? 's' : '') : '';
+      html += '<div class="g-row"><div class="g-label" style="width:' + labelW + 'px;border-left:4px solid ' + cor + ';padding-left:9px">' +
+        '<div class="g-lab-topo">' + toggle + '<div class="nome" data-fase="' + f.linha + '">' + escapar(f.fase) + '</div>' + addBtn + '</div>' +
         (f.subtitulo ? '<div class="sub">' + escapar(f.subtitulo) + '</div>' : '') +
-        '<div class="datas">' + datas + ' · <b>' + prog + '%</b></div></div>' +
+        '<div class="datas">' + datas + ' · <b>' + prog + '%</b>' + contTar + '</div></div>' +
         '<div class="g-track g-faixa" style="width:' + trackW + 'px"><div class="g-grid">' + gridHtml + '</div>' + barra + externo + marcaHoje + '</div></div>';
-    }).join('');
+
+      if (aberta) {
+        tarefas.forEach(function (t) {
+          if (!ehData(t.inicio) || !ehData(t.fim)) return;
+          var tp = Math.max(0, Math.min(100, t.progresso));
+          var tl = diasEntre(startIso, t.inicio) * dia;
+          var tw = (diasEntre(t.inicio, t.fim) + 1) * dia;
+          var tv = diasAte(t.fim) < 0 && tp < 100;
+          var meta = (t.responsavel ? ' · ' + escapar(t.responsavel) : '') + (t.status ? ' · ' + escapar(t.status) : '');
+          html += '<div class="g-row"><div class="g-label tarefa" style="width:' + labelW + 'px;border-left:4px solid ' + cor + ';padding-left:24px">' +
+            '<div class="nome" data-tarefa="' + t.linha + '">' + escapar(t.tarefa) + '</div>' +
+            '<div class="datas">' + formatarData(t.inicio) + ' – ' + formatarData(t.fim) + ' · <b>' + tp + '%</b>' + meta + '</div></div>' +
+            '<div class="g-track g-faixa" style="width:' + trackW + 'px"><div class="g-grid">' + gridHtml + '</div>' +
+              '<div class="g-bar tarefa" data-tarefa="' + t.linha + '" style="left:' + tl + 'px;width:' + tw + 'px;background:' + cor + '"><div class="g-prog" style="width:' + tp + '%"></div></div>' +
+              '<span class="g-pct" style="left:' + (tl + tw + 6) + 'px">' + tp + '%' + (tv ? ' ⚠' : '') + '</span>' + marcaHoje + '</div></div>';
+        });
+      }
+    });
     html += '</div></div>';
     $('kGantt').innerHTML = html;
   }
   $('kGantt').addEventListener('click', function (e) {
+    var tg = e.target.closest('[data-toggle]');
+    if (tg) { var id = tg.dataset.toggle; if (fasesAbertas[id] === false) delete fasesAbertas[id]; else fasesAbertas[id] = false; renderCronograma(); return; }
+    var at = e.target.closest('[data-addtar]');
+    if (at) { abrirTarefa(null, at.dataset.addtar); return; }
+    var tt = e.target.closest('[data-tarefa]');
+    if (tt) { var t = (kanban.tarefas || []).filter(function (x) { return x.linha == tt.dataset.tarefa; })[0]; if (t) abrirTarefa(t); return; }
     var el = e.target.closest('[data-fase]');
     if (el) { var f = kanban.fases.filter(function (x) { return x.linha == el.dataset.fase; })[0]; if (f) abrirFase(f); }
+  });
+
+  // ----- Tarefa (dentro de uma fase) -----
+  $('ktProg').addEventListener('input', function () { $('ktProgVal').textContent = this.value + '%'; });
+  function abrirTarefa(t, faseId) {
+    $('ktTitulo').textContent = t ? 'Editar tarefa' : 'Nova tarefa';
+    $('ktLinha').value = t ? t.linha : '';
+    $('ktFaseId').value = t ? t.faseId : (faseId || '');
+    $('ktNome').value = t ? t.tarefa : '';
+    $('ktIni').value = t && ehData(t.inicio) ? t.inicio : '';
+    $('ktFim').value = t && ehData(t.fim) ? t.fim : '';
+    $('ktResp').value = t ? (t.responsavel || '') : '';
+    $('ktStatus').value = t ? (t.status || '') : '';
+    $('ktProg').value = t ? t.progresso : 0;
+    $('ktProgVal').textContent = (t ? t.progresso : 0) + '%';
+    $('ktExcluir').style.display = t ? '' : 'none';
+    $('ktExcluir').dataset.linha = t ? t.linha : '';
+    $('fundoTarefa').classList.add('aberto');
+    $('ktNome').focus();
+  }
+  $('ktCancelar').addEventListener('click', function () { $('fundoTarefa').classList.remove('aberto'); });
+  $('fundoTarefa').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
+  $('ktExcluir').addEventListener('click', function () {
+    var linha = this.dataset.linha;
+    if (linha && confirm('Excluir esta tarefa?')) { $('fundoTarefa').classList.remove('aberto'); chamarFn('excluirTarefa', [Number(linha)], aplicarKanban, 'Tarefa excluída.'); }
+  });
+  $('formTarefa').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var nome = $('ktNome').value.trim(), ini = $('ktIni').value, fim = $('ktFim').value;
+    if (!nome || !ini || !fim) { toast('Preencha tarefa, início e fim.', true); return; }
+    if (fim < ini) { toast('O fim é anterior ao início.', true); return; }
+    $('fundoTarefa').classList.remove('aberto');
+    chamarFn('salvarTarefa', [{
+      linha: $('ktLinha').value || null, projeto: projetoAtual, faseId: $('ktFaseId').value,
+      tarefa: nome, inicio: ini, fim: fim, responsavel: $('ktResp').value.trim(),
+      status: $('ktStatus').value, progresso: Number($('ktProg').value)
+    }], aplicarKanban, $('ktLinha').value ? 'Tarefa atualizada.' : 'Tarefa criada.');
   });
   document.querySelectorAll('#kZoom button').forEach(function (b) {
     b.addEventListener('click', function () {

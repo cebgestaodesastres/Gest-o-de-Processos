@@ -560,6 +560,18 @@
   .g-hoje { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--critical); z-index: 3; }
   .g-hoje::after { content: 'hoje'; position: absolute; top: 2px; left: 3px; font-size: 9.5px; font-weight: 700; color: var(--critical); }
 
+  /* Hierarquia Fase -> Tarefas no Gantt */
+  .g-lab-topo { display: flex; align-items: center; gap: 5px; }
+  .g-toggle { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 11px; padding: 0 2px; width: 16px; flex: none; }
+  .g-toggle:hover { color: var(--ink); }
+  .g-toggle-vazio { width: 16px; flex: none; display: inline-block; }
+  .g-addtar { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 15px; padding: 0 4px; flex: none; margin-left: auto; line-height: 1; }
+  .g-addtar:hover { color: var(--accent); }
+  .g-label.tarefa { background: var(--surface); }
+  .g-label.tarefa .nome { font-weight: 500; font-size: 12.5px; }
+  .g-label.tarefa .datas { font-size: 10px; }
+  .g-bar.tarefa { height: 15px; top: 15px; opacity: .9; }
+
   /* Título do projeto no Gantt + histórico */
   .gantt-proj { color: var(--ink-2); font-size: 13.5px; margin-bottom: 12px; }
   .gantt-proj b { color: var(--ink); }

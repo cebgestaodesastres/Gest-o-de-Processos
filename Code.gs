@@ -1014,10 +1014,33 @@ var COL_KCARDS = {
 };
 
 var NOME_ABA_KFASES = 'KanbanFases';
-var CAB_KFASES = ['Projeto', 'Fase', 'Subtítulo', 'Início', 'Fim', 'Progresso', 'Marco'];
+var CAB_KFASES = ['Projeto', 'Fase', 'Subtítulo', 'Início', 'Fim', 'Progresso', 'Marco', 'Id'];
 var COL_KFASES = {
-  projeto: 'Projeto', fase: 'Fase', subtitulo: 'Subtítulo', inicio: 'Início', fim: 'Fim', progresso: 'Progresso', marco: 'Marco'
+  projeto: 'Projeto', fase: 'Fase', subtitulo: 'Subtítulo', inicio: 'Início', fim: 'Fim', progresso: 'Progresso', marco: 'Marco', id: 'Id'
 };
+
+// Tarefas dentro de cada fase (hierarquia do Gantt). Vinculadas pela FaseId.
+var NOME_ABA_KTAR = 'KanbanTarefas';
+var CAB_KTAR = ['Projeto', 'FaseId', 'Tarefa', 'Início', 'Fim', 'Progresso', 'Responsável', 'Status'];
+var COL_KTAR = {
+  projeto: 'Projeto', faseId: 'FaseId', tarefa: 'Tarefa', inicio: 'Início', fim: 'Fim',
+  progresso: 'Progresso', responsavel: 'Responsável', status: 'Status'
+};
+
+/** Garante que toda fase tenha um Id estável (para vincular tarefas). */
+function garantirIdsFases_() {
+  var aba = obterAbaPor_(NOME_ABA_KFASES, CAB_KFASES);
+  var mapa = obterMapaColunasPor_(aba, CAB_KFASES);
+  var ultima = aba.getLastRow();
+  if (ultima < 2) return;
+  var col = mapa[COL_KFASES.id];
+  var vals = aba.getRange(2, col, ultima - 1, 1).getValues();
+  var mudou = false;
+  for (var i = 0; i < vals.length; i++) {
+    if (!String(vals[i][0] || '').trim()) { vals[i][0] = Utilities.getUuid(); mudou = true; }
+  }
+  if (mudou) aba.getRange(2, col, vals.length, 1).setValues(vals);
+}
 
 // Histórico/memória de cada projeto — registra o que foi feito, com data/hora.
 var NOME_ABA_KHIST = 'KanbanHistorico';
@@ -1037,8 +1060,9 @@ function logKanban_(projeto, evento) {
   } catch (e) { /* histórico é best-effort */ }
 }
 
-/** Lê tudo do Kanban: projetos, cartões e fases. Chamado pelo cliente. */
+/** Lê tudo do Kanban: projetos, cartões, fases e tarefas. Chamado pelo cliente. */
 function obterKanban() {
+  garantirIdsFases_();
   return {
     projetos: lerAba_(NOME_ABA_KPROJ, CAB_KPROJ, COL_KPROJ, function (r, mapa) {
       return {
@@ -1069,7 +1093,20 @@ function obterKanban() {
         inicio: deCelula_(r[mapa[COL_KFASES.inicio] - 1]),
         fim: deCelula_(r[mapa[COL_KFASES.fim] - 1]),
         progresso: Number(r[mapa[COL_KFASES.progresso] - 1]) || 0,
-        marco: ehVerdadeiro_(r[mapa[COL_KFASES.marco] - 1])
+        marco: ehVerdadeiro_(r[mapa[COL_KFASES.marco] - 1]),
+        id: deCelula_(r[mapa[COL_KFASES.id] - 1])
+      };
+    }),
+    tarefas: lerAba_(NOME_ABA_KTAR, CAB_KTAR, COL_KTAR, function (r, mapa) {
+      return {
+        projeto: deCelula_(r[mapa[COL_KTAR.projeto] - 1]),
+        faseId: deCelula_(r[mapa[COL_KTAR.faseId] - 1]),
+        tarefa: deCelula_(r[mapa[COL_KTAR.tarefa] - 1]),
+        inicio: deCelula_(r[mapa[COL_KTAR.inicio] - 1]),
+        fim: deCelula_(r[mapa[COL_KTAR.fim] - 1]),
+        progresso: Number(r[mapa[COL_KTAR.progresso] - 1]) || 0,
+        responsavel: deCelula_(r[mapa[COL_KTAR.responsavel] - 1]),
+        status: deCelula_(r[mapa[COL_KTAR.status] - 1])
       };
     }),
     historico: lerAba_(NOME_ABA_KHIST, CAB_KHIST, COL_KHIST, function (r, mapa) {
@@ -1143,6 +1180,7 @@ function excluirProjeto(nome) {
   try {
     excluirLinhasPorProjeto_(NOME_ABA_KCARDS, CAB_KCARDS, COL_KCARDS.projeto, nome);
     excluirLinhasPorProjeto_(NOME_ABA_KFASES, CAB_KFASES, COL_KFASES.projeto, nome);
+    excluirLinhasPorProjeto_(NOME_ABA_KTAR, CAB_KTAR, COL_KTAR.projeto, nome);
     excluirLinhasPorProjeto_(NOME_ABA_KHIST, CAB_KHIST, COL_KHIST.projeto, nome);
     var aba = obterAbaPor_(NOME_ABA_KPROJ, CAB_KPROJ);
     var mapa = obterMapaColunasPor_(aba, CAB_KPROJ);
@@ -1236,6 +1274,7 @@ function salvarFase(f) {
     row[mapa[COL_KFASES.fim] - 1] = f.fim ? paraCelula_(f.fim) : '';
     row[mapa[COL_KFASES.progresso] - 1] = Math.max(0, Math.min(100, Number(f.progresso) || 0));
     row[mapa[COL_KFASES.marco] - 1] = f.marco ? true : false;
+    if (novo) row[mapa[COL_KFASES.id] - 1] = f.id || Utilities.getUuid();
     aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
     logKanban_(f.projeto, (novo ? 'Fase criada: "' : 'Fase atualizada: "') + (f.fase || '') + '" (' + (f.inicio || '') + ' – ' + (f.fim || '') + ', ' + (Number(f.progresso) || 0) + '%)');
     return obterKanban();
@@ -1251,8 +1290,61 @@ function excluirFase(linha) {
     if (!(linha >= 2)) throw new Error('Linha inválida.');
     var fDel = aba.getRange(linha, mapa[COL_KFASES.fase]).getValue();
     var pDel = aba.getRange(linha, mapa[COL_KFASES.projeto]).getValue();
+    var idDel = String(aba.getRange(linha, mapa[COL_KFASES.id]).getValue() || '').trim();
+    if (idDel) excluirTarefasDaFase_(idDel);
     aba.deleteRow(linha);
     logKanban_(pDel, 'Fase excluída: "' + fDel + '"');
     return obterKanban();
   } finally { lock.releaseLock(); }
+}
+
+/* ---- Tarefas das fases (hierarquia do Gantt) ---- */
+function salvarTarefa(t) {
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_KTAR, CAB_KTAR);
+    var mapa = obterMapaColunasPor_(aba, CAB_KTAR);
+    var linha = Number(t.linha);
+    var novo = !(linha >= 2);
+    if (novo) linha = aba.getLastRow() + 1;
+    aba.getRange(linha, mapa[COL_KTAR.inicio]).setNumberFormat('dd/mm/yyyy');
+    aba.getRange(linha, mapa[COL_KTAR.fim]).setNumberFormat('dd/mm/yyyy');
+    var row = novo ? novaLinhaVazia_(aba.getLastColumn()) : aba.getRange(linha, 1, 1, aba.getLastColumn()).getValues()[0];
+    row[mapa[COL_KTAR.projeto] - 1] = t.projeto || '';
+    row[mapa[COL_KTAR.faseId] - 1] = t.faseId || '';
+    row[mapa[COL_KTAR.tarefa] - 1] = t.tarefa || '';
+    row[mapa[COL_KTAR.inicio] - 1] = t.inicio ? paraCelula_(t.inicio) : '';
+    row[mapa[COL_KTAR.fim] - 1] = t.fim ? paraCelula_(t.fim) : '';
+    row[mapa[COL_KTAR.progresso] - 1] = Math.max(0, Math.min(100, Number(t.progresso) || 0));
+    row[mapa[COL_KTAR.responsavel] - 1] = t.responsavel || '';
+    row[mapa[COL_KTAR.status] - 1] = t.status || '';
+    aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
+    logKanban_(t.projeto, (novo ? 'Tarefa criada: "' : 'Tarefa atualizada: "') + (t.tarefa || '') + '" (' + (t.inicio || '') + ' – ' + (t.fim || '') + ', ' + (Number(t.progresso) || 0) + '%)');
+    return obterKanban();
+  } finally { lock.releaseLock(); }
+}
+
+function excluirTarefa(linha) {
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_KTAR, CAB_KTAR);
+    var mapa = obterMapaColunasPor_(aba, CAB_KTAR);
+    linha = Number(linha);
+    if (!(linha >= 2)) throw new Error('Linha inválida.');
+    var tDel = aba.getRange(linha, mapa[COL_KTAR.tarefa]).getValue();
+    var pDel = aba.getRange(linha, mapa[COL_KTAR.projeto]).getValue();
+    aba.deleteRow(linha);
+    logKanban_(pDel, 'Tarefa excluída: "' + tDel + '"');
+    return obterKanban();
+  } finally { lock.releaseLock(); }
+}
+
+/** Exclui todas as tarefas de uma fase (cascata ao excluir a fase). */
+function excluirTarefasDaFase_(faseId) {
+  var aba = obterAbaPor_(NOME_ABA_KTAR, CAB_KTAR);
+  var mapa = obterMapaColunasPor_(aba, CAB_KTAR);
+  var ultima = aba.getLastRow();
+  for (var l = ultima; l >= 2; l--) {
+    if (String(aba.getRange(l, mapa[COL_KTAR.faseId]).getValue()).trim() === String(faseId).trim()) aba.deleteRow(l);
+  }
 }
