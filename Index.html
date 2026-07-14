@@ -429,9 +429,12 @@
 
   /* ================= Banco de Skills ================= */
   .skills-wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 48px; }
-  .skills-topo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .skills-topo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
   .skills-topo h1 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
   .skills-topo .sub { color: var(--muted); font-size: 13px; }
+  .btn-upload { flex: none; width: 46px; height: 46px; border-radius: 12px; border: 1px solid transparent; background: var(--accent); color: #fff; font-size: 20px; cursor: pointer; display: grid; place-items: center; transition: filter .12s ease, transform .12s ease; box-shadow: 0 4px 12px rgba(47,111,237,.3); }
+  .btn-upload:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn-upload:active { transform: translateY(0); }
   .dropzone { border: 1.5px dashed var(--hairline); border-radius: 14px; padding: 26px; text-align: center; color: var(--ink-2); cursor: pointer; transition: border-color .15s ease, background .15s ease; margin-bottom: 22px; background: var(--surface); }
   .dropzone:hover, .dropzone.arrastando { border-color: var(--accent); background: var(--surface-2); }
   .dropzone .icone { font-size: 26px; margin-bottom: 6px; }
@@ -439,11 +442,14 @@
   .dropzone .dica { color: var(--muted); font-size: 12px; margin-top: 4px; }
   .skills-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
   .skill-card { background: var(--surface); border: 1px solid var(--hairline); border-radius: 13px; padding: 16px; display: flex; flex-direction: column; gap: 9px; cursor: pointer; transition: border-color .12s ease, background .12s ease; }
-  .skill-card:hover { border-color: rgba(255,255,255,.22); background: var(--surface-2); }
-  .skill-card .cab { display: flex; align-items: center; gap: 10px; }
-  .skill-card .icone { width: 36px; height: 36px; flex: none; border-radius: 9px; display: grid; place-items: center; font-size: 17px; background: rgba(144,133,233,.16); color: var(--violet); }
-  .skill-card .nome { font-size: 14.5px; font-weight: 700; overflow-wrap: anywhere; }
-  .skill-card .descricao { color: var(--ink-2); font-size: 13px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .skill-card:hover { border-color: rgba(85,62,35,.28); background: var(--surface-2); }
+  .skill-card .cab { display: flex; align-items: center; gap: 11px; }
+  .skill-card .icone { width: 42px; height: 42px; flex: none; border-radius: 11px; display: grid; place-items: center; font-size: 22px; background: var(--accent-suave); }
+  .skill-card .cab-txt { min-width: 0; }
+  .skill-card .nome { font-size: 15.5px; font-weight: 700; letter-spacing: -.01em; overflow-wrap: anywhere; line-height: 1.25; }
+  .skill-card .slug { font-size: 11px; color: var(--muted); font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .skill-card .descricao { color: var(--ink-2); font-size: 13px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .skill-card .descricao.vazia { font-style: italic; color: var(--muted); }
   .skill-card .rodape { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 4px; }
   .skill-card .arq { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
   .skill-card .acoes { display: flex; gap: 2px; }
@@ -533,8 +539,8 @@
   .g-row { display: flex; border-bottom: 1px solid var(--hairline); }
   .g-row:last-child { border-bottom: none; }
   .g-head { position: sticky; top: 0; z-index: 5; }
-  .g-label { flex: none; box-sizing: border-box; padding: 9px 12px; position: sticky; left: 0; background: var(--surface); z-index: 2; border-right: 1px solid var(--hairline); }
-  .g-head .g-label { z-index: 6; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); display: flex; align-items: center; }
+  .g-label { flex: none; box-sizing: border-box; padding: 9px 12px; position: sticky; left: 0; background: var(--surface-2); z-index: 2; border-right: 2px solid var(--hairline); }
+  .g-head .g-label { z-index: 6; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); display: flex; align-items: center; background: var(--surface-3); }
   .g-label .nome { font-weight: 600; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
   .g-label .nome:hover { color: var(--accent); }
   .g-label .sub { color: var(--ink-2); font-size: 11.5px; overflow-wrap: anywhere; }
@@ -547,7 +553,9 @@
   .g-faixa { position: relative; height: 46px; }
   .g-bar { position: absolute; top: 11px; height: 24px; border-radius: 7px; overflow: hidden; display: flex; align-items: center; cursor: pointer; box-shadow: 0 1px 3px rgba(70,52,30,.22); min-width: 8px; z-index: 1; }
   .g-prog { position: absolute; inset: 0; background: rgba(255,255,255,.34); border-right: 2px solid rgba(255,255,255,.78); }
-  .g-bar .rot { position: relative; z-index: 1; font-size: 11px; font-weight: 700; color: #fff; padding: 0 8px; white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,.3); }
+  .g-bar .rot { position: relative; z-index: 1; font-size: 11px; font-weight: 700; color: #fff; padding: 0 8px; white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,.3); overflow: hidden; text-overflow: ellipsis; }
+  .g-pct { position: absolute; top: 11px; height: 24px; display: flex; align-items: center; font-size: 11.5px; font-weight: 800; color: var(--ink); white-space: nowrap; z-index: 2; }
+  .g-nome-bar { position: absolute; top: 11px; height: 24px; display: flex; align-items: center; font-size: 11.5px; color: var(--ink-2); white-space: nowrap; z-index: 1; }
   .g-marco { position: absolute; top: 12px; width: 20px; height: 20px; transform: translateX(-10px) rotate(45deg); border-radius: 4px; cursor: pointer; box-shadow: 0 1px 3px rgba(70,52,30,.3); z-index: 2; }
   .g-hoje { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--critical); z-index: 3; }
   .g-hoje::after { content: 'hoje'; position: absolute; top: 2px; left: 3px; font-size: 9.5px; font-weight: 700; color: var(--critical); }

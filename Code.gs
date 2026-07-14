@@ -909,18 +909,51 @@ function excluirSkill(linha) {
   }
 }
 
-/** Extrai name/description do front-matter YAML (entre '---' no topo). */
+/**
+ * Extrai name/description do front-matter YAML (entre '---' no topo).
+ * Trata valores em linha única e também blocos escalares (">", ">-", "|",
+ * "|-"), comuns em SKILL.md — antes o valor virava só ">-".
+ */
 function extrairMetaSkill_(texto) {
   var res = { nome: '', descricao: '' };
   if (!texto) return res;
   var t = texto.replace(/^﻿/, '');
   var m = t.match(/^---\s*\r?\n([\s\S]*?)\r?\n---/);
   if (!m) return res;
-  var bloco = m[1];
-  var nm = bloco.match(/^\s*name:\s*(.+?)\s*$/mi);
-  var dm = bloco.match(/^\s*description:\s*(.+?)\s*$/mi);
-  if (nm) res.nome = limparYaml_(nm[1]);
-  if (dm) res.descricao = limparYaml_(dm[1]);
+  var linhas = m[1].split(/\r?\n/);
+  for (var i = 0; i < linhas.length; i++) {
+    var mk = linhas[i].match(/^(\s*)(name|description)\s*:\s*(.*)$/i);
+    if (!mk) continue;
+    var indent = mk[1].length;
+    var chave = mk[2].toLowerCase();
+    var valor = mk[3];
+    var bs = valor.match(/^([>|])([+\-]?)\s*$/); // indicador de bloco escalar
+    if (bs) {
+      var literal = bs[1] === '|';
+      var raw = [], base = null, j = i + 1;
+      for (; j < linhas.length; j++) {
+        var ln = linhas[j];
+        if (/^\s*$/.test(ln)) { raw.push(''); continue; }
+        var ind = ln.match(/^(\s*)/)[1].length;
+        if (ind <= indent) break;
+        if (base === null) base = ind;
+        raw.push(ln.slice(base));
+      }
+      while (raw.length && raw[raw.length - 1] === '') raw.pop();
+      if (literal) {
+        valor = raw.join('\n');
+      } else {
+        valor = raw.reduce(function (acc, p) {
+          if (p === '') return acc.replace(/\s+$/, '') + '\n\n';
+          return acc + (acc && !/\n$/.test(acc) ? ' ' : '') + p;
+        }, '').replace(/\n{3,}/g, '\n\n').trim();
+      }
+      i = j - 1;
+    } else {
+      valor = limparYaml_(valor);
+    }
+    if (chave === 'name') res.nome = valor; else res.descricao = valor;
+  }
   return res;
 }
 

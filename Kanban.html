@@ -403,29 +403,33 @@
     var hojePx = (hoje >= startIso && hoje <= endIso) ? (diasEntre(startIso, hoje) * dia) : null;
     var marcaHoje = hojePx === null ? '' : '<div class="g-hoje" style="left:' + hojePx + 'px"></div>';
 
-    var html = '<div class="gantt-scroll"><div class="gantt-inner" style="width:' + (labelW + timelineW) + 'px">';
+    var trackW = timelineW + 64; // folga à direita para o % externo não cortar
+    var html = '<div class="gantt-scroll"><div class="gantt-inner" style="width:' + (labelW + trackW) + 'px">';
     html += '<div class="g-row g-head"><div class="g-label" style="width:' + labelW + 'px">Fase</div>' +
-      '<div class="g-track" style="width:' + timelineW + 'px"><div class="g-axis">' + eixoHtml + '</div></div></div>';
+      '<div class="g-track" style="width:' + trackW + 'px"><div class="g-axis">' + eixoHtml + '</div></div></div>';
     html += fases.map(function (f, i) {
       var cor = CORES_GANTT[i % CORES_GANTT.length];
       var prog = Math.max(0, Math.min(100, f.progresso));
       var venceu = diasAte(f.fim) < 0 && prog < 100 && !f.marco;
-      var barra;
+      var barra, externo;
       if (f.marco) {
         var xm = diasEntre(startIso, f.fim) * dia;
         barra = '<div class="g-marco" data-fase="' + f.linha + '" title="' + escapar(f.fase) + '" style="left:' + xm + 'px;background:' + cor + '"></div>';
+        externo = '<span class="g-pct" style="left:' + (xm + 14) + 'px;color:' + cor + '">marco</span>';
       } else {
         var left = diasEntre(startIso, f.inicio) * dia;
         var w = (diasEntre(f.inicio, f.fim) + 1) * dia;
         barra = '<div class="g-bar" data-fase="' + f.linha + '" style="left:' + left + 'px;width:' + w + 'px;background:' + cor + '">' +
-          '<div class="g-prog" style="width:' + prog + '%"></div><span class="rot">' + escapar(f.fase) + ' · ' + prog + '%</span></div>';
+          '<div class="g-prog" style="width:' + prog + '%"></div></div>';
+        // percentual SEMPRE visível, logo após a barra (fora dela, não corta)
+        externo = '<span class="g-pct" style="left:' + (left + w + 6) + 'px">' + prog + '%' + (venceu ? ' ⚠' : '') + '</span>';
       }
-      var datas = f.marco ? ('◆ ' + formatarData(f.fim) + ' · marco') : (formatarData(f.inicio) + ' – ' + formatarData(f.fim) + ' · ' + prog + '%' + (venceu ? ' ⚠' : ''));
-      return '<div class="g-row"><div class="g-label" style="width:' + labelW + 'px">' +
+      var datas = f.marco ? ('◆ ' + formatarData(f.fim) + ' · marco') : (formatarData(f.inicio) + ' – ' + formatarData(f.fim));
+      return '<div class="g-row"><div class="g-label" style="width:' + labelW + 'px;border-left:4px solid ' + cor + ';padding-left:9px">' +
         '<div class="nome" data-fase="' + f.linha + '">' + escapar(f.fase) + '</div>' +
         (f.subtitulo ? '<div class="sub">' + escapar(f.subtitulo) + '</div>' : '') +
-        '<div class="datas">' + datas + '</div></div>' +
-        '<div class="g-track g-faixa" style="width:' + timelineW + 'px"><div class="g-grid">' + gridHtml + '</div>' + barra + marcaHoje + '</div></div>';
+        '<div class="datas">' + datas + ' · <b>' + prog + '%</b></div></div>' +
+        '<div class="g-track g-faixa" style="width:' + trackW + 'px"><div class="g-grid">' + gridHtml + '</div>' + barra + externo + marcaHoje + '</div></div>';
     }).join('');
     html += '</div></div>';
     $('kGantt').innerHTML = html;

@@ -2,15 +2,11 @@
 <section class="view" id="view-skills">
   <div class="skills-wrap">
     <div class="skills-topo">
+      <button class="btn-upload" id="btnUpload" title="UPLOAD DE SKILLS" aria-label="Upload de skills">⬆️</button>
       <div>
         <h1>Banco de Skills</h1>
         <div class="sub" id="skillsSub">Envie um arquivo para começar.</div>
       </div>
-    </div>
-    <div class="dropzone" id="dropzone">
-      <div class="icone">⬆️</div>
-      <div>Arraste um arquivo aqui ou <strong>clique para selecionar</strong></div>
-      <div class="dica">Aceita <strong>.md</strong> (ou <strong>SKILL.md</strong>) e <strong>.zip</strong> de skills do Claude. Nome e descrição são capturados automaticamente.</div>
       <input type="file" id="skillFile" accept=".md,.markdown,.txt,.zip" multiple style="display:none">
     </div>
     <div class="skills-grade" id="skillsGrade"></div>
@@ -54,18 +50,63 @@
   }
   function aplicarSkills(r) { skills = r.skills || []; renderSkills(); }
 
+  // Ícone por palavra-chave da skill (nome + descrição + conteúdo).
+  var ICONES_SKILL = [
+    [/sei|of[íi]cio|despacho|mem?orando|document|processo|protocolo/i, '📑'],
+    [/oper|militar|bombeir|resgate|emerg|desastre|opera[çc]/i, '🚒'],
+    [/pdf/i, '📄'],
+    [/dataviz|gr[áa]fico|chart|dashboard|visualiz|m[ée]tric/i, '📊'],
+    [/design|artifact|artefato|layout|\bui\b|\bux\b|tema|estilo/i, '🎨'],
+    [/planilha|sheet|excel|tabela|c[áa]lculo/i, '🧮'],
+    [/e-?mail|gmail|mensagem|notifica/i, '✉️'],
+    [/agenda|calend[áa]rio|calendar|prazo|cronograma/i, '🗓️'],
+    [/mapa|\bgeo|\bgis\b|localiza|coordenad/i, '🗺️'],
+    [/seguran|security|senha|credencial|criptog/i, '🔒'],
+    [/c[óo]digo|\bcode\b|script|program|\bapi\b|dev/i, '💻'],
+    [/relat[óo]rio|\breport|indicador/i, '📈'],
+    [/kanban|projeto|gest[ãa]o|planejamento|gant/i, '🗂️']
+  ];
+  function iconeSkill(s) {
+    var alvo = ((s.nome || '') + ' ' + (s.descricao || '') + ' ' + String(s.conteudo || '').slice(0, 400));
+    for (var i = 0; i < ICONES_SKILL.length; i++) if (ICONES_SKILL[i][0].test(alvo)) return ICONES_SKILL[i][1];
+    return '🧩';
+  }
+  // "sei-operacional" -> "SEI Operacional"
+  var ACRONIMOS = { sei: 1, pop: 1, nac: 1, ceb: 1, os: 1, pdf: 1, gd: 1, fb: 1, brec: 1, act: 1, usar: 1, api: 1, ui: 1, ux: 1, pcif: 1, cbs: 1, nif: 1, bemad: 1, boa: 1, ia: 1, csv: 1, html: 1 };
+  function humanizarNome(nome) {
+    var ps = String(nome || '').replace(/[._\-]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+    if (!ps.length) return 'Skill';
+    return ps.map(function (w) {
+      if (ACRONIMOS[w.toLowerCase()]) return w.toUpperCase();
+      if (/^[a-z]{2,3}$/i.test(w) && !/[aeiou]/i.test(w)) return w.toUpperCase();
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    }).join(' ');
+  }
+  // Descarta descrições "vazias" tipo ">-" ou só pontuação.
+  function resumoSkill(desc) {
+    var d = String(desc || '').trim();
+    if (!d || /^[>|+\-\s"']*$/.test(d)) return '';
+    return d;
+  }
+
   function renderSkills() {
     $('skillsSub').textContent = skills.length
-      ? skills.length + (skills.length === 1 ? ' skill cadastrada.' : ' skills cadastradas.')
-      : 'Envie um arquivo para começar.';
+      ? skills.length + (skills.length === 1 ? ' skill cadastrada' : ' skills cadastradas')
+      : 'Nenhuma skill ainda.';
     if (!skills.length) {
-      $('skillsGrade').innerHTML = '<div class="skills-vazio">Nenhuma skill ainda. Arraste um arquivo .md ou .zip acima.</div>';
+      $('skillsGrade').innerHTML = '<div class="skills-vazio">Nenhuma skill ainda. Use o botão <strong>⬆</strong> acima para enviar um arquivo .md ou .zip.</div>';
       return;
     }
     $('skillsGrade').innerHTML = skills.map(function (s) {
+      var resumo = resumoSkill(s.descricao);
       return '<div class="skill-card" data-skill="' + s.linha + '">' +
-        '<div class="cab"><div class="icone">🧩</div><div class="nome">' + escapar(s.nome) + '</div></div>' +
-        '<div class="descricao">' + escapar(s.descricao) + '</div>' +
+        '<div class="cab">' +
+          '<div class="icone">' + iconeSkill(s) + '</div>' +
+          '<div class="cab-txt"><div class="nome">' + escapar(humanizarNome(s.nome)) + '</div>' +
+            '<div class="slug">' + escapar(s.nome) + '</div></div>' +
+        '</div>' +
+        '<div class="descricao' + (resumo ? '' : ' vazia') + '">' +
+          escapar(resumo || 'Sem resumo capturado — abra para editar ou reenvie o arquivo.') + '</div>' +
         '<div class="rodape">' +
           '<span class="arq" title="' + escapar(s.arquivo) + '">' + escapar(s.arquivo || '') + '</span>' +
           '<span class="acoes">' +
@@ -100,15 +141,8 @@
     toast('Baixando "' + nomeArq + '".');
   }
 
-  // ----- Upload -----
-  var dz = $('dropzone');
-  dz.addEventListener('click', function (e) { if (e.target.id === 'skillFile') return; $('skillFile').click(); });
-  dz.addEventListener('dragover', function (e) { e.preventDefault(); dz.classList.add('arrastando'); });
-  dz.addEventListener('dragleave', function () { dz.classList.remove('arrastando'); });
-  dz.addEventListener('drop', function (e) {
-    e.preventDefault(); dz.classList.remove('arrastando');
-    if (e.dataTransfer.files.length) enviarArquivos(e.dataTransfer.files);
-  });
+  // ----- Upload (botão no topo) -----
+  $('btnUpload').addEventListener('click', function () { $('skillFile').click(); });
   $('skillFile').addEventListener('change', function () {
     if (this.files.length) enviarArquivos(this.files);
     this.value = '';
