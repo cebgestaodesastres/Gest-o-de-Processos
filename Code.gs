@@ -1047,18 +1047,10 @@ var NOME_ABA_KHIST = 'KanbanHistorico';
 var CAB_KHIST = ['Projeto', 'Quando', 'Evento'];
 var COL_KHIST = { projeto: 'Projeto', quando: 'Quando', evento: 'Evento' };
 
-function logKanban_(projeto, evento) {
-  try {
-    var aba = obterAbaPor_(NOME_ABA_KHIST, CAB_KHIST);
-    var mapa = obterMapaColunasPor_(aba, CAB_KHIST);
-    var linha = aba.getLastRow() + 1;
-    var row = novaLinhaVazia_(aba.getLastColumn());
-    row[mapa[COL_KHIST.projeto] - 1] = projeto || '';
-    row[mapa[COL_KHIST.quando] - 1] = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
-    row[mapa[COL_KHIST.evento] - 1] = evento || '';
-    aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
-  } catch (e) { /* histórico é best-effort */ }
-}
+// O acompanhamento do projeto é feito pelo "Panorama" (visão geral calculada
+// a partir das fases/tarefas/prazos), e não por um log de cada ação. Mantido
+// como no-op para não guardar cada clique.
+function logKanban_(projeto, evento) { /* intencionalmente vazio */ }
 
 /** Lê tudo do Kanban: projetos, cartões, fases e tarefas. Chamado pelo cliente. */
 function obterKanban() {

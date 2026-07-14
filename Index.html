@@ -572,15 +572,24 @@
   .g-label.tarefa .datas { font-size: 10px; }
   .g-bar.tarefa { height: 15px; top: 15px; opacity: .9; }
 
-  /* Título do projeto no Gantt + histórico */
-  .gantt-proj { color: var(--ink-2); font-size: 13.5px; margin-bottom: 12px; }
-  .gantt-proj b { color: var(--ink); }
-  .hist-lista { display: flex; flex-direction: column; max-height: 56vh; overflow-y: auto; }
-  .hist-item { display: flex; gap: 12px; padding: 8px 2px; border-top: 1px solid var(--hairline); font-size: 13px; }
-  .hist-item:first-child { border-top: none; }
-  .hist-quando { flex: none; width: 116px; color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
-  .hist-evento { color: var(--ink); overflow-wrap: anywhere; }
-  .hist-vazio { color: var(--muted); text-align: center; padding: 26px; }
+  /* Banner de vínculo do Gantt ao projeto */
+  .gantt-proj { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; margin-bottom: 12px; background: var(--accent-suave); border: 1px solid rgba(47,111,237,.28); border-radius: 999px; padding: 5px 14px; }
+  .gantt-proj b { color: var(--accent); }
+
+  /* Panorama do projeto */
+  .pan-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .pan-tile { background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 10px; padding: 9px 12px; }
+  .pan-tile .r { color: var(--muted); font-size: 11px; font-weight: 600; }
+  .pan-tile .v { font-size: 17px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .pan-lista { display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; }
+  .pan-fase { border-left: 4px solid var(--muted); padding: 9px 12px; background: var(--surface-2); border-radius: 8px; }
+  .pan-fase .cab { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .pan-fase .nome { font-weight: 700; font-size: 14px; }
+  .pan-fase .per { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .pan-badge { font-size: 10.5px; font-weight: 700; padding: 1px 9px; border-radius: 999px; margin-left: auto; }
+  .pan-tar { display: flex; gap: 10px; font-size: 12.5px; color: var(--ink-2); padding: 3px 0 0 6px; }
+  .pan-tar .tn { flex: 1; overflow-wrap: anywhere; }
+  .pan-vazio { color: var(--muted); text-align: center; padding: 24px; }
 </style>
 </head>
 <body>

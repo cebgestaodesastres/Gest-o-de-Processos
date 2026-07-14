@@ -9,7 +9,7 @@
         <button data-kmodo="cronograma">📅 Gantt</button>
       </div>
       <div class="acoes">
-        <button class="btn" id="kHistBtn" style="display:none" title="Memória do projeto: tudo que foi feito, com data/hora">🕘 Histórico</button>
+        <button class="btn" id="kHistBtn" style="display:none" title="Panorama do projeto: fases, tarefas, prazos e progresso">📋 Panorama</button>
         <button class="btn" id="kColunasBtn" style="display:none">⚙ Colunas</button>
         <button class="btn" id="kExcluirProj" style="display:none">🗑️ Excluir projeto</button>
         <button class="btn primario" id="kNovoProj">+ Novo controle Kanban</button>
@@ -168,13 +168,35 @@
   </div>
 </div>
 
-<!-- Modal: histórico do projeto -->
+<!-- Modal: panorama do projeto -->
 <div class="fundo-modal" id="fundoHist">
   <div class="modal largo">
-    <h2 id="kHistTitulo">Histórico do projeto</h2>
-    <p class="dica" style="margin-bottom:10px">Memória do projeto: cada ação (criar/mover/editar/excluir entregas e fases) fica registrada com data e hora.</p>
-    <div class="hist-lista" id="kHistLista"></div>
-    <div class="rodape"><button type="button" class="btn" id="kHistFechar">Fechar</button></div>
+    <h2 id="kHistTitulo">Panorama do projeto</h2>
+    <p class="dica" style="margin-bottom:12px">Visão geral do que o projeto contém: fases, tarefas, prazos e progresso — para entender rapidamente o contexto.</p>
+    <div id="kHistLista"></div>
+    <div class="rodape">
+      <button type="button" class="btn" id="kHistFechar">Fechar</button>
+      <button type="button" class="btn primario" id="kHistCopiar">📋 Copiar panorama</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: inserir processo no Kanban (entrega OU novo projeto) -->
+<div class="fundo-modal" id="fundoInserirK">
+  <div class="modal confirmar">
+    <h2>Inserir no Kanban</h2>
+    <p class="dica" style="margin-bottom:14px">Processo: <b id="ikDesc"></b></p>
+    <div id="ikEntregaWrap">
+      <div class="campo">
+        <label for="ikProjSel">Adicionar como entrega no projeto</label>
+        <select id="ikProjSel"></select>
+      </div>
+      <button type="button" class="btn" id="ikAddEntrega" style="margin-top:10px;width:100%">➕ Adicionar como entrega</button>
+      <div style="text-align:center;color:var(--muted);font-size:12px;margin:12px 0">— ou —</div>
+    </div>
+    <div id="ikSemProj" class="dica" style="margin-bottom:8px;display:none">Nenhum projeto ainda. Crie um projeto a partir deste processo (ele ganha quadro e cronograma/Gantt próprios):</div>
+    <button type="button" class="btn primario" id="ikNovoProj" style="width:100%">🗂️ Criar novo projeto com este processo</button>
+    <div class="rodape"><button type="button" class="btn" id="ikCancelar">Cancelar</button></div>
   </div>
 </div>
 
@@ -426,7 +448,7 @@
 
   // ----- Cronograma (Gantt) com zoom -----
   function renderCronograma() {
-    $('kGanttProj').innerHTML = 'Cronograma do projeto <b>' + escapar(projetoAtual || '') + '</b>';
+    $('kGanttProj').innerHTML = '🔗 Cronograma vinculado ao projeto <b>' + escapar(projetoAtual || '') + '</b>';
     var fases = kanban.fases.filter(function (f) { return f.projeto === projetoAtual && ehData(f.inicio) && ehData(f.fim); })
       .sort(function (a, b) { return a.inicio < b.inicio ? -1 : a.inicio > b.inicio ? 1 : 0; });
     if (!fases.length) {
@@ -724,18 +746,72 @@
     }], aplicarKanban, $('kfLinha').value ? 'Fase atualizada.' : 'Fase criada.');
   });
 
-  // ----- Histórico (memória do projeto) -----
-  function renderHist() {
-    $('kHistTitulo').textContent = 'Histórico — ' + (projetoAtual || '');
-    var lista = (kanban.historico || []).filter(function (h) { return h.projeto === projetoAtual; }).slice().reverse();
-    if (!lista.length) { $('kHistLista').innerHTML = '<div class="hist-vazio">Sem registros ainda. As ações do projeto aparecerão aqui automaticamente.</div>'; return; }
-    $('kHistLista').innerHTML = lista.map(function (h) {
-      return '<div class="hist-item"><span class="hist-quando">' + escapar(h.quando) + '</span><span class="hist-evento">' + escapar(h.evento) + '</span></div>';
-    }).join('');
+  // ----- Panorama do projeto (visão geral: fases, tarefas, prazos, progresso) -----
+  function statusFase(f) {
+    if (f.marco) return { t: 'Marco', c: '#6d4fd0' };
+    if (f.progresso >= 100) return { t: 'Concluída', c: '#12a150' };
+    if (ehData(f.fim) && diasAte(f.fim) < 0) return { t: 'Atrasada', c: '#dc2626' };
+    if (ehData(f.fim) && diasAte(f.fim) <= 7) return { t: 'Prazo próximo', c: '#b7791f' };
+    return { t: 'Em dia', c: '#2f6fed' };
   }
-  $('kHistBtn').addEventListener('click', function () { renderHist(); $('fundoHist').classList.add('aberto'); });
+  function dadosPanorama() {
+    var fases = (kanban.fases || []).filter(function (f) { return f.projeto === projetoAtual; })
+      .sort(function (a, b) { return (a.inicio || '') < (b.inicio || '') ? -1 : 1; });
+    var tarefas = (kanban.tarefas || []).filter(function (t) { return t.projeto === projetoAtual; });
+    var cards = (kanban.cards || []).filter(function (c) { return c.projeto === projetoAtual; });
+    var comProg = fases.filter(function (f) { return !f.marco; });
+    var geral = comProg.length ? Math.round(comProg.reduce(function (a, f) { return a + (f.progresso || 0); }, 0) / comProg.length) : 0;
+    var comData = fases.filter(function (f) { return ehData(f.inicio) && ehData(f.fim); });
+    var minI = comData.reduce(function (m, f) { return (!m || f.inicio < m) ? f.inicio : m; }, '');
+    var maxF = comData.reduce(function (m, f) { return (!m || f.fim > m) ? f.fim : m; }, '');
+    var vencidas = fases.filter(function (f) { return !f.marco && f.progresso < 100 && ehData(f.fim) && diasAte(f.fim) < 0; }).length;
+    return { fases: fases, tarefas: tarefas, cards: cards, geral: geral, minI: minI, maxF: maxF, vencidas: vencidas };
+  }
+  function renderPanorama() {
+    $('kHistTitulo').textContent = 'Panorama — ' + (projetoAtual || '');
+    var d = dadosPanorama();
+    function tile(r, v) { return '<div class="pan-tile"><div class="r">' + r + '</div><div class="v">' + v + '</div></div>'; }
+    var tiles = tile('Fases', d.fases.length) + tile('Tarefas', d.tarefas.length) + tile('Entregas', d.cards.length) +
+      tile('Progresso', d.geral + '%') + tile('Período', (d.minI ? formatarData(d.minI) : '—') + ' – ' + (d.maxF ? formatarData(d.maxF) : '—')) +
+      tile('Prazos vencidos', d.vencidas);
+    var lista = d.fases.length ? d.fases.map(function (f, i) {
+      var cor = CORES_GANTT[i % CORES_GANTT.length];
+      var st = statusFase(f);
+      var per = f.marco ? ('◆ ' + formatarData(f.fim)) : (formatarData(f.inicio) + ' – ' + formatarData(f.fim));
+      var tars = d.tarefas.filter(function (t) { return t.faseId === f.id; }).sort(function (a, b) { return (a.inicio || '') < (b.inicio || '') ? -1 : 1; });
+      var tarsHtml = tars.length ? tars.map(function (t) {
+        var per2 = ehData(t.inicio) ? formatarData(t.inicio) + '–' + formatarData(t.fim) : '';
+        return '<div class="pan-tar"><span class="tn">• ' + escapar(t.tarefa) + '</span><span>' + per2 + ' · ' + t.progresso + '%' +
+          (t.responsavel ? ' · ' + escapar(t.responsavel) : '') + (t.status ? ' · ' + escapar(t.status) : '') + '</span></div>';
+      }).join('') : '<div class="pan-tar" style="color:var(--muted)">sem tarefas</div>';
+      return '<div class="pan-fase" style="border-left-color:' + cor + '"><div class="cab">' +
+        '<span class="nome">' + escapar(f.fase) + '</span><span class="per">' + per + '</span>' +
+        '<span class="pan-badge" style="background:' + rgba(st.c, 0.16) + ';color:' + st.c + '">' + st.t + (f.marco ? '' : ' · ' + f.progresso + '%') + '</span></div>' +
+        (f.subtitulo ? '<div class="per">' + escapar(f.subtitulo) + '</div>' : '') + tarsHtml + '</div>';
+    }).join('') : '<div class="pan-vazio">Nenhuma fase ainda. Adicione fases no cronograma (Gantt) para montar o panorama.</div>';
+    $('kHistLista').innerHTML = '<div class="pan-tiles">' + tiles + '</div><div class="pan-lista">' + lista + '</div>';
+  }
+  function panoramaTexto() {
+    var d = dadosPanorama();
+    var l = ['PANORAMA — ' + projetoAtual, 'Fases: ' + d.fases.length + ' | Tarefas: ' + d.tarefas.length + ' | Entregas: ' + d.cards.length + ' | Progresso geral: ' + d.geral + '%',
+      'Período: ' + (d.minI ? formatarData(d.minI) : '—') + ' a ' + (d.maxF ? formatarData(d.maxF) : '—') + ' | Prazos vencidos: ' + d.vencidas, ''];
+    d.fases.forEach(function (f) {
+      var st = statusFase(f);
+      l.push('• ' + f.fase + ' (' + (f.marco ? '◆ ' + formatarData(f.fim) : formatarData(f.inicio) + '–' + formatarData(f.fim)) + ') — ' + st.t + (f.marco ? '' : ' ' + f.progresso + '%'));
+      d.tarefas.filter(function (t) { return t.faseId === f.id; }).forEach(function (t) {
+        l.push('    - ' + t.tarefa + ' (' + (ehData(t.inicio) ? formatarData(t.inicio) + '–' + formatarData(t.fim) : 's/ datas') + ') ' + t.progresso + '%' + (t.responsavel ? ' — ' + t.responsavel : '') + (t.status ? ' [' + t.status + ']' : ''));
+      });
+    });
+    return l.join('\n');
+  }
+  $('kHistBtn').addEventListener('click', function () { renderPanorama(); $('fundoHist').classList.add('aberto'); });
   $('kHistFechar').addEventListener('click', function () { $('fundoHist').classList.remove('aberto'); });
   $('fundoHist').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
+  $('kHistCopiar').addEventListener('click', function () {
+    var txt = panoramaTexto();
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast('Panorama copiado.'); }, function () { toast('Não foi possível copiar.', true); });
+    else toast('Cópia não suportada.', true);
+  });
 
   // ----- Integração: Kanban -> Controle de Processos -----
   $('kcParaProc').addEventListener('click', function () {
@@ -747,21 +823,49 @@
   });
 
   // ----- Integração: Controle de Processos -> Kanban (chamado pelo módulo Gestão) -----
+  var procPendente = null;
+  function detalhesDoProcesso(p) {
+    var det = [];
+    if (p.processo && p.processo !== '-') det.push('Processo SEI: ' + p.processo);
+    if (p.link) det.push(p.link);
+    if (p.obs) det.push(p.obs);
+    return det;
+  }
   function inserirProcessoNoKanban(p) {
     trocarView('kanban');
     var abrir = function () {
-      if (!kanban.projetos.length) { toast('Crie um projeto Kanban primeiro para inserir a entrega.', true); $('kNovoProj').click(); return; }
-      abrirCard(null, colsDoProjeto()[0].nome);
-      $('kcTit').value = p.descricao || (p.processo && p.processo !== '-' ? p.processo : 'Entrega');
-      $('kcPrazo').value = ehData(p.prazo) ? p.prazo : '';
-      var det = [];
-      if (p.processo && p.processo !== '-') det.push('Processo SEI: ' + p.processo);
-      if (p.link) det.push(p.link);
-      if (p.obs) det.push(p.obs);
-      $('kcDesc').value = det.join('\n');
-      $('kcTags').value = 'SEI';
+      procPendente = p;
+      $('ikDesc').textContent = p.descricao || (p.processo && p.processo !== '-' ? p.processo : 'Processo');
+      var temProj = kanban.projetos.length > 0;
+      $('ikEntregaWrap').style.display = temProj ? '' : 'none';
+      $('ikSemProj').style.display = temProj ? 'none' : '';
+      $('ikProjSel').innerHTML = kanban.projetos.map(function (pr) {
+        return '<option value="' + escapar(pr.nome) + '"' + (pr.nome === projetoAtual ? ' selected' : '') + '>' + escapar(pr.nome) + '</option>';
+      }).join('');
+      $('fundoInserirK').classList.add('aberto');
     };
     if (!kanbanCarregado) chamarFn('obterKanban', [], function (r) { kanban = r; kanbanCarregado = true; ajustarProjetoAtual(); renderKanban(); abrir(); });
     else abrir();
   }
+  $('ikCancelar').addEventListener('click', function () { $('fundoInserirK').classList.remove('aberto'); });
+  $('fundoInserirK').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
+  $('ikAddEntrega').addEventListener('click', function () {
+    if (!procPendente) return;
+    projetoAtual = $('ikProjSel').value;
+    $('fundoInserirK').classList.remove('aberto');
+    kModo = 'quadro'; renderKanban();
+    abrirCard(null, colsDoProjeto()[0].nome);
+    $('kcTit').value = procPendente.descricao || (procPendente.processo && procPendente.processo !== '-' ? procPendente.processo : 'Entrega');
+    $('kcPrazo').value = ehData(procPendente.prazo) ? procPendente.prazo : '';
+    $('kcDesc').value = detalhesDoProcesso(procPendente).join('\n');
+    $('kcTags').value = 'SEI';
+  });
+  $('ikNovoProj').addEventListener('click', function () {
+    if (!procPendente) return;
+    var nome = (procPendente.descricao || (procPendente.processo && procPendente.processo !== '-' ? procPendente.processo : 'Projeto')).slice(0, 80);
+    var desc = detalhesDoProcesso(procPendente).join(' — ');
+    projetoAtual = nome;
+    $('fundoInserirK').classList.remove('aberto');
+    chamarFn('criarProjeto', [nome, desc], function (r) { aplicarKanban(r); toast('Projeto criado. Abra o Gantt para adicionar as fases.'); });
+  });
 </script>
