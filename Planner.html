@@ -105,15 +105,13 @@
           <label for="aDescricao">Detalhes</label>
           <textarea id="aDescricao" placeholder="Local, efetivo, observações…"></textarea>
         </div>
-        <div class="campo largura-total">
-          <label for="aProcessos">Processos SEI relacionados</label>
-          <textarea id="aProcessos" placeholder="1400.01.0000000/2026-00 | https://sei.mg.gov.br/..."></textarea>
-          <span class="dica">Um por linha. Formato: "número | link" (o link é opcional).</span>
+        <div class="campo campo-ref">
+          <label for="aProcessos">Processos SEI <span class="dica-inline">nº | link · 1 por linha</span></label>
+          <textarea id="aProcessos" placeholder="1400.01.0000000/2026-00 | link"></textarea>
         </div>
-        <div class="campo largura-total">
-          <label for="aLinks">Links de referência</label>
+        <div class="campo campo-ref">
+          <label for="aLinks">Links de referência <span class="dica-inline">rótulo | link · 1 por linha</span></label>
           <textarea id="aLinks" placeholder="Rótulo | https://exemplo.com"></textarea>
-          <span class="dica">Um por linha. Opcional: "Rótulo | https://endereço".</span>
         </div>
       </div>
       <div class="rodape">
@@ -204,13 +202,13 @@
     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
   var DIAS_SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
   var CATEGORIAS_PLANNER = [
-    { nome: 'Operação', cor: '#e5793b' },
-    { nome: 'Treinamento', cor: '#199e70' },
-    { nome: 'Supervisão', cor: '#9085e9' },
-    { nome: 'Reunião', cor: '#3987e5' },
-    { nome: 'Prazo', cor: '#d03b3b' },
-    { nome: 'Feriado', cor: '#fab219' },
-    { nome: 'Geral', cor: '#898781' }
+    { nome: 'Operação', cor: '#d9662a' },
+    { nome: 'Treinamento', cor: '#0f8a5f' },
+    { nome: 'Supervisão', cor: '#6d4fd0' },
+    { nome: 'Reunião', cor: '#2f6fed' },
+    { nome: 'Prazo', cor: '#dc2626' },
+    { nome: 'Feriado', cor: '#b7791f' },
+    { nome: 'Geral', cor: '#64748b' }
   ];
 
   var atividades = [];
@@ -221,6 +219,8 @@
   var diaAberto = null;
   var eventoAberto = null;    // linha do evento no modal de detalhe
   var resumoPeriodoAtual = 'semana';
+  var catsOcultas = {};       // categorias escondidas pelo filtro da legenda
+  function catVisivel(c) { return !catsOcultas[c]; }
 
   function cap(s) { return String(s).charAt(0).toUpperCase() + String(s).slice(1); }
   function corCategoria(nome) {
@@ -300,10 +300,17 @@
   function renderPlanner() { if (modoPlanner === 'ano') renderAno(); else renderCalendario(); }
 
   function renderLegenda() {
-    $('calLegenda').innerHTML = CATEGORIAS_PLANNER.map(function (c) {
-      return '<div class="item"><span class="ponto" style="background:' + c.cor + '"></span>' + escapar(c.nome) + '</div>';
+    $('calLegenda').innerHTML = '<span class="leg-rot">Filtrar</span>' + CATEGORIAS_PLANNER.map(function (c) {
+      return '<button type="button" class="item leg-cat' + (catsOcultas[c.nome] ? ' off' : '') + '" data-cat="' + escapar(c.nome) +
+        '" title="Mostrar/ocultar ' + escapar(c.nome) + '"><span class="ponto" style="background:' + c.cor + '"></span>' + escapar(c.nome) + '</button>';
     }).join('');
   }
+  $('calLegenda').addEventListener('click', function (e) {
+    var b = e.target.closest('.leg-cat'); if (!b) return;
+    var c = b.dataset.cat;
+    if (catsOcultas[c]) delete catsOcultas[c]; else catsOcultas[c] = true;
+    renderLegenda(); renderPlanner();
+  });
 
   // ----- Alternância de modo -----
   function mudarModo(m) {
@@ -330,7 +337,7 @@
       var prefixoMes = isoData(anoRef, m, 1).slice(0, 7);
       // Atividades que tocam o mês; multi-dia primeiro (empacotamento melhor).
       var doMes = atividades.filter(function (a) {
-        return ehData(a.data) && a.data.slice(0, 7) <= prefixoMes && fimDe(a).slice(0, 7) >= prefixoMes;
+        return ehData(a.data) && catVisivel(a.categoria) && a.data.slice(0, 7) <= prefixoMes && fimDe(a).slice(0, 7) >= prefixoMes;
       }).sort(function (a, b) {
         if (a.data !== b.data) return a.data < b.data ? -1 : 1;
         return (fimDe(b) > b.data ? 1 : 0) - (fimDe(a) > a.data ? 1 : 0);
@@ -402,7 +409,7 @@
       var iso = isoData(d.getFullYear(), d.getMonth(), d.getDate());
       var fora = d.getMonth() !== mes ? ' fora' : '';
       var eHoje = iso === hoje ? ' hoje' : '';
-      var doDia = atividadesDoDia(iso);
+      var doDia = atividadesDoDia(iso).filter(function (a) { return catVisivel(a.categoria); });
       var chips = doDia.slice(0, 3).map(function (a) {
         var cor = corCategoria(a.categoria);
         var multi = ehData(a.dataFim) && a.dataFim > a.data ? '↔ ' : '';
@@ -791,10 +798,10 @@
   function statusPrazo(iso) {
     var d = diasAte(iso);
     if (d === null) return null;
-    if (d < 0) return { cor: '#d03b3b', chave: 'vencido', icone: '⚠', txt: d === -1 ? 'venceu ontem' : 'venceu há ' + (-d) + ' d' };
-    if (d <= 3) return { cor: '#e5793b', chave: 'urg', icone: '🔴', txt: d === 0 ? 'vence hoje' : (d === 1 ? 'vence amanhã' : 'em ' + d + ' d') };
-    if (d <= 7) return { cor: '#fab219', chave: 'prox', icone: '🟠', txt: 'em ' + d + ' d' };
-    return { cor: '#0ca30c', chave: 'ok', icone: '🟢', txt: 'em ' + d + ' d' };
+    if (d < 0) return { cor: '#dc2626', chave: 'vencido', icone: '⚠', txt: d === -1 ? 'venceu ontem' : 'venceu há ' + (-d) + ' d' };
+    if (d <= 3) return { cor: '#d9662a', chave: 'urg', icone: '🔴', txt: d === 0 ? 'vence hoje' : (d === 1 ? 'vence amanhã' : 'em ' + d + ' d') };
+    if (d <= 7) return { cor: '#b7791f', chave: 'prox', icone: '🟠', txt: 'em ' + d + ' d' };
+    return { cor: '#12a150', chave: 'ok', icone: '🟢', txt: 'em ' + d + ' d' };
   }
   function renderPrazos(lista) {
     var prazos = lista.filter(function (a) { return a.categoria === 'Prazo' && !a.concluida && ehData(a.data); })
@@ -803,7 +810,7 @@
     var cont = { vencido: 0, urg: 0, prox: 0, ok: 0 };
     prazos.forEach(function (a) { var s = statusPrazo(a.data); if (s) cont[s.chave]++; });
     var total = prazos.length;
-    var seg = [['vencido', '#d03b3b', 'Vencidos'], ['urg', '#e5793b', '≤ 3 dias'], ['prox', '#fab219', '≤ 7 dias'], ['ok', '#0ca30c', '> 7 dias']];
+    var seg = [['vencido', '#dc2626', 'Vencidos'], ['urg', '#d9662a', '≤ 3 dias'], ['prox', '#b7791f', '≤ 7 dias'], ['ok', '#12a150', '> 7 dias']];
     var barra = seg.map(function (s) { var c = cont[s[0]]; return c ? '<span style="background:' + s[1] + ';width:' + (c / total * 100) + '%"></span>' : ''; }).join('');
     var legenda = seg.filter(function (s) { return cont[s[0]]; }).map(function (s) {
       return '<div class="item"><span class="ponto" style="background:' + s[1] + '"></span>' + s[2] + ': ' + cont[s[0]] + '</div>';
@@ -844,7 +851,7 @@
 
   /* ----- Tooltip: resumo do dia ao passar o cursor ----- */
   function conteudoTooltip(iso) {
-    var lista = atividadesDoDia(iso);
+    var lista = atividadesDoDia(iso).filter(function (a) { return catVisivel(a.categoria); });
     if (!lista.length) return '';
     var p = iso.split('-');
     var html = '<div class="tt-data">' + Number(p[2]) + ' de ' + cap(MESES[Number(p[1]) - 1]) + '</div>';
