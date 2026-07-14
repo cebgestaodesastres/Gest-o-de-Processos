@@ -6,9 +6,10 @@
       <select class="proj-sel" id="kProjSel" title="Projeto"></select>
       <div class="seg-toggle" id="kModo">
         <button class="ativo" data-kmodo="quadro">📋 Quadro</button>
-        <button data-kmodo="cronograma">📅 Cronograma</button>
+        <button data-kmodo="cronograma">📅 Gantt</button>
       </div>
       <div class="acoes">
+        <button class="btn" id="kColunasBtn" style="display:none">⚙ Colunas</button>
         <button class="btn" id="kExcluirProj" style="display:none">🗑️ Excluir projeto</button>
         <button class="btn primario" id="kNovoProj">+ Novo controle Kanban</button>
       </div>
@@ -17,17 +18,35 @@
 
     <div id="kVazio" class="kanban-vazio" style="display:none">
       <strong>Nenhum projeto ainda.</strong>
-      Crie um "Novo controle Kanban" para organizar as entregas por status e o cronograma por fases.
+      Crie um "Novo controle Kanban" para organizar as entregas por status e montar o cronograma (Gantt) por fases.
     </div>
 
-    <div id="kQuadro"><div class="kb-board" id="kBoard"></div></div>
+    <div id="kQuadro">
+      <div class="kb-toolbar" id="kToolbar">
+        <input type="search" class="busca" id="kBusca" placeholder="Buscar entrega, responsável, etiqueta…">
+        <select id="kFiltroPrio">
+          <option value="">Toda prioridade</option>
+          <option value="Alta">Alta</option>
+          <option value="Média">Média</option>
+          <option value="Baixa">Baixa</option>
+        </select>
+        <select id="kFiltroResp"><option value="">Todos responsáveis</option></select>
+        <label class="dica" style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="kFiltroBloq" style="width:16px;height:16px;min-height:0"> Só bloqueados</label>
+      </div>
+      <div class="kb-board" id="kBoard"></div>
+    </div>
 
     <div id="kCronograma" style="display:none">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <span class="dica">Cada fase é uma barra no tempo, com % concluído e a marca de hoje.</span>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="seg-toggle" id="kZoom">
+          <button data-zoom="semana">Semana</button>
+          <button class="ativo" data-zoom="mes">Mês</button>
+          <button data-zoom="ano">Ano</button>
+        </div>
+        <span class="dica">Cada fase é uma barra no tempo (ou um marco ◆), com % concluído e a linha de hoje.</span>
         <button class="btn" id="kNovaFase" style="margin-left:auto">+ Nova fase</button>
       </div>
-      <div class="gantt" id="kGantt"></div>
+      <div id="kGantt"></div>
     </div>
   </div>
 </section>
@@ -72,9 +91,29 @@
           <label for="kcPrazo">Prazo</label>
           <input type="date" id="kcPrazo">
         </div>
+        <div class="campo">
+          <label for="kcPrio">Prioridade</label>
+          <select id="kcPrio">
+            <option value="">—</option>
+            <option value="Alta">Alta</option>
+            <option value="Média">Média</option>
+            <option value="Baixa">Baixa</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="kcResp">Responsável</label>
+          <input id="kcResp" placeholder="Ex.: Cap Gomes">
+        </div>
+        <div class="campo largura-total">
+          <label for="kcTags">Etiquetas <span class="dica-inline">separe por vírgula</span></label>
+          <input id="kcTags" placeholder="RESPAD, urgente, NAC">
+        </div>
         <div class="campo largura-total">
           <label for="kcDesc">Detalhes</label>
           <textarea id="kcDesc" placeholder="Observações, critérios de conclusão…"></textarea>
+        </div>
+        <div class="campo largura-total">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="kcBloq" style="width:17px;height:17px;min-height:0"> 🚫 Bloqueado (impedido de avançar)</label>
         </div>
       </div>
       <div class="rodape">
@@ -94,18 +133,25 @@
       <input type="hidden" id="kfLinha">
       <div class="grade">
         <div class="campo largura-total">
-          <label for="kfNome">Fase</label>
+          <label for="kfNome">Fase (título)</label>
           <input id="kfNome" required placeholder="Ex.: Levantar referências">
         </div>
+        <div class="campo largura-total">
+          <label for="kfSub">Subtítulo (opcional)</label>
+          <input id="kfSub" placeholder="Ex.: pesquisa e benchmarking">
+        </div>
+        <div class="campo largura-total">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="kfMarco" style="width:17px;height:17px;min-height:0"> ◆ É um marco (evento de data única)</label>
+        </div>
         <div class="campo">
-          <label for="kfIni">Início</label>
+          <label for="kfIni" id="kfIniRot">Início</label>
           <input type="date" id="kfIni" required>
         </div>
         <div class="campo">
           <label for="kfFim">Fim (prazo)</label>
           <input type="date" id="kfFim" required>
         </div>
-        <div class="campo largura-total">
+        <div class="campo largura-total" id="kfProgWrap">
           <label for="kfProg">Progresso: <span id="kfProgVal">0%</span></label>
           <input type="range" id="kfProg" min="0" max="100" step="5" value="0">
         </div>
@@ -119,25 +165,54 @@
   </div>
 </div>
 
+<!-- Modal: colunas -->
+<div class="fundo-modal" id="fundoColunas">
+  <div class="modal">
+    <h2>Colunas do quadro</h2>
+    <p class="dica" style="margin-bottom:12px">Renomeie, reordene o fluxo e defina o limite de trabalho em progresso (WIP). Deixe o WIP em 0 para “sem limite”.</p>
+    <div id="colLista"></div>
+    <button type="button" class="btn" id="colAdd" style="margin-top:4px">+ Adicionar coluna</button>
+    <div class="rodape">
+      <button type="button" class="btn" id="colCancelar">Cancelar</button>
+      <button type="button" class="btn primario" id="colSalvar">Salvar colunas</button>
+    </div>
+  </div>
+</div>
+
 <script>
   /* ===================== Kanban ===================== */
-  var COLUNAS_KANBAN = [
-    { nome: 'A fazer', cor: '#64748b', wip: 0 },
-    { nome: 'Fazendo', cor: '#2f6fed', wip: 3 },
-    { nome: 'Revisão', cor: '#b7791f', wip: 2 },
-    { nome: 'Concluído', cor: '#12a150', wip: 0 }
-  ];
+  var COLUNAS_PADRAO_STR = 'A fazer:0|Fazendo:3|Revisão:2|Concluído:0';
+  var CORES_COL = ['#64748b', '#2f6fed', '#b7791f', '#0f8a5f', '#6d4fd0', '#0d9488', '#d9662a'];
   var CORES_GANTT = ['#2f6fed', '#0f8a5f', '#d9662a', '#6d4fd0', '#b7791f', '#0d9488', '#dc2626'];
   var MESES_K = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  var ZOOMS = { semana: { dia: 26, unidade: 'semana' }, mes: { dia: 6, unidade: 'mes' }, ano: { dia: 1.5, unidade: 'ano' } };
 
   var kanban = { projetos: [], cards: [], fases: [] };
   var kanbanCarregado = false;
   var projetoAtual = null;
   var kModo = 'quadro';
+  var zoomGantt = 'mes';
 
-  function corColuna(nome) { var c = COLUNAS_KANBAN.filter(function (x) { return x.nome === nome; })[0]; return c ? c.cor : '#64748b'; }
   function isoToDate(iso) { var p = iso.split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])); }
+  function fmtIso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function diasEntre(a, b) { return Math.round((isoToDate(b) - isoToDate(a)) / 86400000); }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function iniciais(nome) {
+    var ps = String(nome || '').trim().split(/\s+/).filter(Boolean);
+    if (!ps.length) return '?';
+    return (ps[0][0] + (ps.length > 1 ? ps[ps.length - 1][0] : '')).toUpperCase();
+  }
+  function corPrioridade(p) { return { 'Alta': '#dc2626', 'Média': '#b7791f', 'Baixa': '#12a150' }[p] || '#9a8b76'; }
+
+  function projAtualObj() { return kanban.projetos.filter(function (p) { return p.nome === projetoAtual; })[0]; }
+  function colsDoProjeto() {
+    var proj = projAtualObj();
+    var str = (proj && proj.colunas) || COLUNAS_PADRAO_STR;
+    return str.split('|').map(function (s) {
+      var i = s.lastIndexOf(':'); var nome = i >= 0 ? s.slice(0, i) : s; var wip = i >= 0 ? Number(s.slice(i + 1)) || 0 : 0;
+      return { nome: nome.trim(), wip: wip };
+    }).filter(function (x) { return x.nome; });
+  }
 
   function carregarKanban() {
     chamarFn('obterKanban', [], function (r) { kanban = r; kanbanCarregado = true; ajustarProjetoAtual(); renderKanban(); });
@@ -154,20 +229,40 @@
     $('kQuadro').style.display = temProj && kModo === 'quadro' ? '' : 'none';
     $('kCronograma').style.display = temProj && kModo === 'cronograma' ? '' : 'none';
     $('kExcluirProj').style.display = temProj ? '' : 'none';
-    // selector de projeto
+    $('kColunasBtn').style.display = temProj ? '' : 'none';
+    $('kProjSel').style.display = temProj ? '' : 'none';
     $('kProjSel').innerHTML = kanban.projetos.map(function (p) {
       return '<option value="' + escapar(p.nome) + '"' + (p.nome === projetoAtual ? ' selected' : '') + '>' + escapar(p.nome) + '</option>';
     }).join('');
-    $('kProjSel').style.display = temProj ? '' : 'none';
-    var proj = kanban.projetos.filter(function (p) { return p.nome === projetoAtual; })[0];
+    var proj = projAtualObj();
     $('kProjDesc').textContent = proj && proj.descricao ? proj.descricao : '';
     if (!temProj) return;
+    // opções de responsáveis no filtro
+    var resps = {};
+    kanban.cards.filter(function (c) { return c.projeto === projetoAtual; }).forEach(function (c) { if (c.responsavel) resps[c.responsavel] = 1; });
+    var valResp = $('kFiltroResp').value;
+    $('kFiltroResp').innerHTML = '<option value="">Todos responsáveis</option>' +
+      Object.keys(resps).sort().map(function (r) { return '<option value="' + escapar(r) + '">' + escapar(r) + '</option>'; }).join('');
+    $('kFiltroResp').value = valResp;
     if (kModo === 'quadro') renderQuadro(); else renderCronograma();
   }
 
   // ----- Quadro -----
+  function passaFiltro(c) {
+    var busca = $('kBusca').value.trim().toLowerCase();
+    var prio = $('kFiltroPrio').value;
+    var resp = $('kFiltroResp').value;
+    if (prio && c.prioridade !== prio) return false;
+    if (resp && c.responsavel !== resp) return false;
+    if ($('kFiltroBloq').checked && !c.bloqueado) return false;
+    if (busca) {
+      var alvo = (c.titulo + ' ' + c.descricao + ' ' + c.responsavel + ' ' + c.etiquetas).toLowerCase();
+      if (alvo.indexOf(busca) === -1) return false;
+    }
+    return true;
+  }
   function cardsDaColuna(coluna) {
-    return kanban.cards.filter(function (c) { return c.projeto === projetoAtual && (c.coluna || 'A fazer') === coluna; })
+    return kanban.cards.filter(function (c) { return c.projeto === projetoAtual && (c.coluna || 'A fazer') === coluna && passaFiltro(c); })
       .sort(function (a, b) {
         var pa = ehData(a.prazo) ? a.prazo : '9999', pb = ehData(b.prazo) ? b.prazo : '9999';
         return pa < pb ? -1 : pa > pb ? 1 : 0;
@@ -181,34 +276,48 @@
     else if (d <= 3) { cor = '#d9662a'; extra = ' · ' + d + 'd'; }
     else if (d <= 7) { cor = '#b7791f'; extra = ' · ' + d + 'd'; }
     else { cor = '#5f5346'; }
-    return '<span class="kb-prazo" style="background:' + rgba(cor, 0.14) + ';color:' + cor + '">📅 ' + formatarData(iso) + extra + '</span>';
+    return '<span class="kb-chip" style="background:' + rgba(cor, 0.14) + ';color:' + cor + '">📅 ' + formatarData(iso) + extra + '</span>';
   }
   function renderQuadro() {
-    $('kBoard').innerHTML = COLUNAS_KANBAN.map(function (col) {
+    var cols = colsDoProjeto();
+    $('kBoard').innerHTML = cols.map(function (col, idx) {
+      var cor = CORES_COL[idx % CORES_COL.length];
       var lista = cardsDaColuna(col.nome);
       var wip = col.wip ? (lista.length + '/' + col.wip) : String(lista.length);
       var excede = col.wip && lista.length > col.wip ? ' excede' : '';
       var cards = lista.map(function (c) {
-        return '<div class="kb-card" draggable="true" data-linha="' + c.linha + '" style="border-left-color:' + corColuna(col.nome) + '">' +
+        var corP = corPrioridade(c.prioridade);
+        var tags = String(c.etiquetas || '').split(',').map(function (t) { return t.trim(); }).filter(Boolean)
+          .map(function (t) { return '<span class="kb-tag">' + escapar(t) + '</span>'; }).join('');
+        var chips = '';
+        if (c.prioridade) chips += '<span class="kb-chip" style="background:' + rgba(corP, 0.16) + ';color:' + corP + '">' + escapar(c.prioridade) + '</span>';
+        if (c.bloqueado) chips += '<span class="kb-bloq">🚫 Bloqueado</span>';
+        chips += chipPrazo(c.prazo) + tags;
+        var avatar = c.responsavel ? '<span class="kb-avatar" title="' + escapar(c.responsavel) + '">' + escapar(iniciais(c.responsavel)) + '</span>' : '';
+        return '<div class="kb-card' + (c.bloqueado ? ' bloq' : '') + '" draggable="true" data-linha="' + c.linha + '" style="border-left-color:' + corP + '">' +
           '<div class="titulo">' + escapar(c.titulo) + '</div>' +
           (c.descricao ? '<div class="desc">' + escapar(c.descricao) + '</div>' : '') +
-          '<div class="rodape">' + chipPrazo(c.prazo) +
-            '<span class="mover">' +
+          (chips ? '<div class="kb-chips">' + chips + '</div>' : '') +
+          '<div class="rodape">' + avatar +
+            '<span class="dir"><span class="mover">' +
               '<button title="Mover para a esquerda" data-mov="-1" data-linha="' + c.linha + '">‹</button>' +
               '<button title="Mover para a direita" data-mov="1" data-linha="' + c.linha + '">›</button>' +
-            '</span></div>' +
+            '</span></span></div>' +
         '</div>';
       }).join('');
       return '<div class="kb-coluna">' +
-        '<div class="kb-col-topo"><span class="ponto-col" style="background:' + col.cor + '"></span>' + escapar(col.nome) +
-          '<span class="qtd' + excede + '"' + (col.wip ? ' title="Limite de trabalho em progresso (WIP)"' : '') + '>' + wip + '</span></div>' +
+        '<div class="kb-col-topo"><span class="ponto-col" style="background:' + cor + '"></span>' + escapar(col.nome) +
+          '<span class="qtd' + excede + '"' + (col.wip ? ' title="Limite WIP"' : '') + '>' + wip + '</span></div>' +
         '<div class="kb-lista" data-col="' + escapar(col.nome) + '">' + cards + '</div>' +
         '<div class="kb-add"><button data-add="' + escapar(col.nome) + '">+ Adicionar</button></div>' +
       '</div>';
     }).join('');
   }
 
-  // Cliques do quadro (adicionar, editar, mover)
+  ['kBusca', 'kFiltroPrio', 'kFiltroResp', 'kFiltroBloq'].forEach(function (id) {
+    $(id).addEventListener('input', function () { if (kModo === 'quadro') renderQuadro(); });
+  });
+
   $('kBoard').addEventListener('click', function (e) {
     var add = e.target.closest('[data-add]');
     if (add) { abrirCard(null, add.dataset.add); return; }
@@ -216,16 +325,17 @@
     if (mov) {
       var c = kanban.cards.filter(function (x) { return x.linha == mov.dataset.linha; })[0];
       if (!c) return;
-      var idx = COLUNAS_KANBAN.map(function (x) { return x.nome; }).indexOf(c.coluna || 'A fazer');
-      var novo = Math.max(0, Math.min(COLUNAS_KANBAN.length - 1, idx + Number(mov.dataset.mov)));
-      if (novo !== idx) chamarFn('moverCard', [Number(c.linha), COLUNAS_KANBAN[novo].nome], aplicarKanban);
+      var nomes = colsDoProjeto().map(function (x) { return x.nome; });
+      var idx = nomes.indexOf(c.coluna || nomes[0]);
+      var novo = Math.max(0, Math.min(nomes.length - 1, idx + Number(mov.dataset.mov)));
+      if (novo !== idx) chamarFn('moverCard', [Number(c.linha), nomes[novo]], aplicarKanban);
       return;
     }
     var card = e.target.closest('.kb-card');
     if (card) { var cc = kanban.cards.filter(function (x) { return x.linha == card.dataset.linha; })[0]; if (cc) abrirCard(cc); }
   });
 
-  // Arrastar e soltar entre colunas
+  // Arrastar e soltar
   $('kBoard').addEventListener('dragstart', function (e) {
     var card = e.target.closest('.kb-card'); if (!card) return;
     e.dataTransfer.setData('text/plain', card.dataset.linha);
@@ -244,66 +354,92 @@
   });
   $('kBoard').addEventListener('drop', function (e) {
     var lista = e.target.closest('.kb-lista'); if (!lista) return;
-    e.preventDefault();
-    lista.classList.remove('dragover');
+    e.preventDefault(); lista.classList.remove('dragover');
     var linha = e.dataTransfer.getData('text/plain');
     var c = kanban.cards.filter(function (x) { return x.linha == linha; })[0];
-    if (c && (c.coluna || 'A fazer') !== lista.dataset.col) chamarFn('moverCard', [Number(linha), lista.dataset.col], aplicarKanban);
+    if (c && (c.coluna || '') !== lista.dataset.col) chamarFn('moverCard', [Number(linha), lista.dataset.col], aplicarKanban);
   });
 
-  // ----- Cronograma (Gantt) -----
+  // ----- Cronograma (Gantt) com zoom -----
   function renderCronograma() {
     var fases = kanban.fases.filter(function (f) { return f.projeto === projetoAtual && ehData(f.inicio) && ehData(f.fim); })
       .sort(function (a, b) { return a.inicio < b.inicio ? -1 : a.inicio > b.inicio ? 1 : 0; });
     if (!fases.length) {
-      $('kGantt').innerHTML = '<div class="gantt-vazio">Nenhuma fase ainda. Clique em <strong>+ Nova fase</strong> para montar o cronograma (ex.: “Levantar referências” até 30/08, “Testes iniciais” em setembro…).</div>';
+      $('kGantt').innerHTML = '<div class="gantt-vazio">Nenhuma fase ainda. Clique em <strong>+ Nova fase</strong> para montar o cronograma (ex.: “Levantar referências” até 30/08, “Testes iniciais” em setembro, “Integração” em outubro…).</div>';
       return;
     }
     var minIni = fases.reduce(function (m, f) { return f.inicio < m ? f.inicio : m; }, fases[0].inicio);
     var maxFim = fases.reduce(function (m, f) { return f.fim > m ? f.fim : m; }, fases[0].fim);
-    var di = isoToDate(minIni), df = isoToDate(maxFim);
-    var start = new Date(di.getFullYear(), di.getMonth(), 1);
-    var end = new Date(df.getFullYear(), df.getMonth() + 1, 0);
-    var startIso = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-01';
-    var endIso = end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0');
-    var total = diasEntre(startIso, endIso) + 1;
-
-    // meses (cabeçalho e grade)
-    var meses = [], cur = new Date(start);
-    while (cur <= end) {
-      var diasNoMes = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
-      meses.push({ rot: MESES_K[cur.getMonth()] + '/' + String(cur.getFullYear()).slice(2), pct: diasNoMes / total * 100 });
-      cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+    var di = isoToDate(minIni), dfim = isoToDate(maxFim), start, end;
+    if (zoomGantt === 'semana') {
+      start = new Date(di); start.setDate(di.getDate() - di.getDay());
+      end = new Date(dfim); end.setDate(dfim.getDate() + (6 - dfim.getDay()));
+    } else if (zoomGantt === 'mes') {
+      start = new Date(di.getFullYear(), di.getMonth(), 1);
+      end = new Date(dfim.getFullYear(), dfim.getMonth() + 1, 0);
+    } else {
+      start = new Date(di.getFullYear(), 0, 1);
+      end = new Date(dfim.getFullYear(), 11, 31);
     }
-    var mesesHtml = meses.map(function (m) { return '<div class="gantt-mes" style="width:' + m.pct + '%">' + m.rot + '</div>'; }).join('');
-    var gradeHtml = meses.map(function (m) { return '<span style="width:' + m.pct + '%"></span>'; }).join('');
+    var startIso = fmtIso(start), endIso = fmtIso(end);
+    var total = diasEntre(startIso, endIso) + 1;
+    var dia = ZOOMS[zoomGantt].dia;
+    var timelineW = Math.round(total * dia);
+    var labelW = 210;
+
+    // unidades do eixo
+    var unidades = [], cur = new Date(start);
+    if (zoomGantt === 'semana') {
+      while (cur <= end) { unidades.push({ rot: pad2(cur.getDate()) + '/' + pad2(cur.getMonth() + 1), dias: 7 }); cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 7); }
+    } else if (zoomGantt === 'mes') {
+      while (cur <= end) { var dm = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate(); unidades.push({ rot: MESES_K[cur.getMonth()] + '/' + String(cur.getFullYear()).slice(2), dias: dm }); cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1); }
+    } else {
+      while (cur <= end) { var y = cur.getFullYear(); var diy = ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0) ? 366 : 365; unidades.push({ rot: String(y), dias: diy }); cur = new Date(y + 1, 0, 1); }
+    }
+    var eixoHtml = unidades.map(function (u) { return '<div class="g-unit" style="width:' + (u.dias * dia) + 'px">' + u.rot + '</div>'; }).join('');
+    var gridHtml = unidades.map(function (u) { return '<span style="width:' + (u.dias * dia) + 'px"></span>'; }).join('');
 
     var hoje = hojeIso();
-    var hojePct = (hoje >= startIso && hoje <= endIso) ? (diasEntre(startIso, hoje) / total * 100) : null;
-    var marcaHoje = hojePct === null ? '' : '<div class="gantt-hoje" style="left:' + hojePct + '%"></div>';
+    var hojePx = (hoje >= startIso && hoje <= endIso) ? (diasEntre(startIso, hoje) * dia) : null;
+    var marcaHoje = hojePx === null ? '' : '<div class="g-hoje" style="left:' + hojePx + 'px"></div>';
 
-    var html = '<div class="gantt-cab"><div class="canto">Fase</div><div class="gantt-meses">' + mesesHtml + '</div></div>';
+    var html = '<div class="gantt-scroll"><div class="gantt-inner" style="width:' + (labelW + timelineW) + 'px">';
+    html += '<div class="g-row g-head"><div class="g-label" style="width:' + labelW + 'px">Fase</div>' +
+      '<div class="g-track" style="width:' + timelineW + 'px"><div class="g-axis">' + eixoHtml + '</div></div></div>';
     html += fases.map(function (f, i) {
       var cor = CORES_GANTT[i % CORES_GANTT.length];
-      var leftPct = diasEntre(startIso, f.inicio) / total * 100;
-      var widthPct = (diasEntre(f.inicio, f.fim) + 1) / total * 100;
       var prog = Math.max(0, Math.min(100, f.progresso));
-      var venceu = diasAte(f.fim) < 0 && prog < 100;
-      return '<div class="gantt-linha">' +
-        '<div class="gantt-fase-info"><div class="nome" data-fase="' + f.linha + '">' + escapar(f.fase) + '</div>' +
-          '<div class="datas">' + formatarData(f.inicio) + ' – ' + formatarData(f.fim) + ' · ' + prog + '%' + (venceu ? ' ⚠' : '') + '</div></div>' +
-        '<div class="gantt-faixa"><div class="gantt-grade">' + gradeHtml + '</div>' +
-          '<div class="gantt-barra" data-fase="' + f.linha + '" style="left:' + leftPct + '%;width:' + widthPct + '%;background:' + cor + '">' +
-            '<div class="gantt-prog" style="width:' + prog + '%"></div>' +
-            '<span class="rot">' + escapar(f.fase) + ' · ' + prog + '%</span>' +
-          '</div>' + marcaHoje + '</div>' +
-      '</div>';
+      var venceu = diasAte(f.fim) < 0 && prog < 100 && !f.marco;
+      var barra;
+      if (f.marco) {
+        var xm = diasEntre(startIso, f.fim) * dia;
+        barra = '<div class="g-marco" data-fase="' + f.linha + '" title="' + escapar(f.fase) + '" style="left:' + xm + 'px;background:' + cor + '"></div>';
+      } else {
+        var left = diasEntre(startIso, f.inicio) * dia;
+        var w = (diasEntre(f.inicio, f.fim) + 1) * dia;
+        barra = '<div class="g-bar" data-fase="' + f.linha + '" style="left:' + left + 'px;width:' + w + 'px;background:' + cor + '">' +
+          '<div class="g-prog" style="width:' + prog + '%"></div><span class="rot">' + escapar(f.fase) + ' · ' + prog + '%</span></div>';
+      }
+      var datas = f.marco ? ('◆ ' + formatarData(f.fim) + ' · marco') : (formatarData(f.inicio) + ' – ' + formatarData(f.fim) + ' · ' + prog + '%' + (venceu ? ' ⚠' : ''));
+      return '<div class="g-row"><div class="g-label" style="width:' + labelW + 'px">' +
+        '<div class="nome" data-fase="' + f.linha + '">' + escapar(f.fase) + '</div>' +
+        (f.subtitulo ? '<div class="sub">' + escapar(f.subtitulo) + '</div>' : '') +
+        '<div class="datas">' + datas + '</div></div>' +
+        '<div class="g-track g-faixa" style="width:' + timelineW + 'px"><div class="g-grid">' + gridHtml + '</div>' + barra + marcaHoje + '</div></div>';
     }).join('');
+    html += '</div></div>';
     $('kGantt').innerHTML = html;
   }
   $('kGantt').addEventListener('click', function (e) {
     var el = e.target.closest('[data-fase]');
     if (el) { var f = kanban.fases.filter(function (x) { return x.linha == el.dataset.fase; })[0]; if (f) abrirFase(f); }
+  });
+  document.querySelectorAll('#kZoom button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      zoomGantt = b.dataset.zoom;
+      document.querySelectorAll('#kZoom button').forEach(function (x) { x.classList.toggle('ativo', x === b); });
+      renderCronograma();
+    });
   });
 
   // ----- Alternância de modo / projeto -----
@@ -334,15 +470,51 @@
     }
   });
 
-  // ----- Cartão: novo / editar -----
+  // ----- Colunas do quadro -----
+  function linhaColuna(nome, wip) {
+    var div = document.createElement('div');
+    div.className = 'col-linha';
+    div.innerHTML = '<input class="nome" value="' + escapar(nome || '') + '" placeholder="Nome da coluna">' +
+      '<input class="wip" type="number" min="0" value="' + (wip || 0) + '" title="Limite WIP (0 = sem limite)">' +
+      '<button type="button" class="rm" title="Remover">✕</button>';
+    div.querySelector('.rm').addEventListener('click', function () { div.remove(); });
+    return div;
+  }
+  $('kColunasBtn').addEventListener('click', function () {
+    var lista = $('colLista'); lista.innerHTML = '';
+    colsDoProjeto().forEach(function (c) { lista.appendChild(linhaColuna(c.nome, c.wip)); });
+    $('fundoColunas').classList.add('aberto');
+  });
+  $('colAdd').addEventListener('click', function () { $('colLista').appendChild(linhaColuna('', 0)); });
+  $('colCancelar').addEventListener('click', function () { $('fundoColunas').classList.remove('aberto'); });
+  $('fundoColunas').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
+  $('colSalvar').addEventListener('click', function () {
+    var linhas = Array.prototype.slice.call($('colLista').querySelectorAll('.col-linha'));
+    var cols = [];
+    for (var i = 0; i < linhas.length; i++) {
+      var nome = linhas[i].querySelector('.nome').value.trim().replace(/[|:]/g, ' ');
+      var wip = Math.max(0, Number(linhas[i].querySelector('.wip').value) || 0);
+      if (nome) cols.push(nome + ':' + wip);
+    }
+    if (!cols.length) { toast('Defina ao menos uma coluna.', true); return; }
+    $('fundoColunas').classList.remove('aberto');
+    chamarFn('salvarColunasProjeto', [projetoAtual, cols.join('|')], aplicarKanban, 'Colunas atualizadas.');
+  });
+
+  // ----- Cartão -----
   function abrirCard(c, coluna) {
-    $('kcColuna').innerHTML = COLUNAS_KANBAN.map(function (col) { return '<option value="' + escapar(col.nome) + '">' + escapar(col.nome) + '</option>'; }).join('');
+    var nomes = colsDoProjeto().map(function (x) { return x.nome; });
+    $('kcColuna').innerHTML = nomes.map(function (n) { return '<option value="' + escapar(n) + '">' + escapar(n) + '</option>'; }).join('');
     $('kcTitulo').textContent = c ? 'Editar entrega' : 'Nova entrega';
     $('kcLinha').value = c ? c.linha : '';
     $('kcTit').value = c ? c.titulo : '';
-    $('kcColuna').value = c ? (c.coluna || 'A fazer') : (coluna || 'A fazer');
+    $('kcColuna').value = c ? (c.coluna || nomes[0]) : (coluna || nomes[0]);
     $('kcPrazo').value = c && ehData(c.prazo) ? c.prazo : '';
+    $('kcPrio').value = c ? (c.prioridade || '') : '';
+    $('kcResp').value = c ? (c.responsavel || '') : '';
+    $('kcTags').value = c ? (c.etiquetas || '') : '';
     $('kcDesc').value = c ? c.descricao : '';
+    $('kcBloq').checked = c ? !!c.bloqueado : false;
     $('kcExcluir').style.display = c ? '' : 'none';
     $('kcExcluir').dataset.linha = c ? c.linha : '';
     $('fundoCard').classList.add('aberto');
@@ -361,20 +533,32 @@
     $('fundoCard').classList.remove('aberto');
     chamarFn('salvarCard', [{
       linha: $('kcLinha').value || null, projeto: projetoAtual, coluna: $('kcColuna').value,
-      titulo: titulo, descricao: $('kcDesc').value.trim(), prazo: $('kcPrazo').value || ''
+      titulo: titulo, descricao: $('kcDesc').value.trim(), prazo: $('kcPrazo').value || '',
+      prioridade: $('kcPrio').value, responsavel: $('kcResp').value.trim(),
+      etiquetas: $('kcTags').value.trim(), bloqueado: $('kcBloq').checked
     }], aplicarKanban, $('kcLinha').value ? 'Entrega atualizada.' : 'Entrega criada.');
   });
 
-  // ----- Fase: nova / editar -----
+  // ----- Fase -----
   $('kfProg').addEventListener('input', function () { $('kfProgVal').textContent = this.value + '%'; });
+  $('kfMarco').addEventListener('change', function () {
+    var marco = this.checked;
+    $('kfProgWrap').style.display = marco ? 'none' : '';
+    $('kfIniRot').textContent = marco ? 'Data do marco' : 'Início';
+    if (marco) $('kfFim').value = $('kfIni').value;
+  });
+  $('kfIni').addEventListener('change', function () { if ($('kfMarco').checked) $('kfFim').value = this.value; });
   function abrirFase(f) {
     $('kfTitulo').textContent = f ? 'Editar fase' : 'Nova fase';
     $('kfLinha').value = f ? f.linha : '';
     $('kfNome').value = f ? f.fase : '';
+    $('kfSub').value = f ? (f.subtitulo || '') : '';
+    $('kfMarco').checked = f ? !!f.marco : false;
     $('kfIni').value = f && ehData(f.inicio) ? f.inicio : '';
     $('kfFim').value = f && ehData(f.fim) ? f.fim : '';
     $('kfProg').value = f ? f.progresso : 0;
     $('kfProgVal').textContent = (f ? f.progresso : 0) + '%';
+    $('kfMarco').dispatchEvent(new Event('change'));
     $('kfExcluir').style.display = f ? '' : 'none';
     $('kfExcluir').dataset.linha = f ? f.linha : '';
     $('fundoFase').classList.add('aberto');
@@ -389,13 +573,14 @@
   });
   $('formFase').addEventListener('submit', function (e) {
     e.preventDefault();
-    var nome = $('kfNome').value.trim(), ini = $('kfIni').value, fim = $('kfFim').value;
-    if (!nome || !ini || !fim) { toast('Preencha fase, início e fim.', true); return; }
+    var nome = $('kfNome').value.trim(), marco = $('kfMarco').checked;
+    var ini = $('kfIni').value, fim = marco ? $('kfIni').value : $('kfFim').value;
+    if (!nome || !ini || !fim) { toast('Preencha os campos obrigatórios.', true); return; }
     if (fim < ini) { toast('O fim é anterior ao início.', true); return; }
     $('fundoFase').classList.remove('aberto');
     chamarFn('salvarFase', [{
-      linha: $('kfLinha').value || null, projeto: projetoAtual, fase: nome,
-      inicio: ini, fim: fim, progresso: Number($('kfProg').value)
+      linha: $('kfLinha').value || null, projeto: projetoAtual, fase: nome, subtitulo: $('kfSub').value.trim(),
+      inicio: ini, fim: fim, progresso: marco ? 100 : Number($('kfProg').value), marco: marco
     }], aplicarKanban, $('kfLinha').value ? 'Fase atualizada.' : 'Fase criada.');
   });
 </script>

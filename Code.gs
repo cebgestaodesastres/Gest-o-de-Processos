@@ -967,17 +967,24 @@ function primeiroParagrafo_(texto) {
  * Três abas de dados: KanbanProjetos, KanbanCards e KanbanFases.
  * ======================================================================== */
 
+var COLUNAS_KANBAN_PADRAO = 'A fazer:0|Fazendo:3|Revisão:2|Concluído:0';
+
 var NOME_ABA_KPROJ = 'KanbanProjetos';
-var CAB_KPROJ = ['Nome', 'Descrição', 'Criado'];
-var COL_KPROJ = { nome: 'Nome', descricao: 'Descrição', criado: 'Criado' };
+var CAB_KPROJ = ['Nome', 'Descrição', 'Criado', 'Colunas'];
+var COL_KPROJ = { nome: 'Nome', descricao: 'Descrição', criado: 'Criado', colunas: 'Colunas' };
 
 var NOME_ABA_KCARDS = 'KanbanCards';
-var CAB_KCARDS = ['Projeto', 'Coluna', 'Título', 'Descrição', 'Prazo'];
-var COL_KCARDS = { projeto: 'Projeto', coluna: 'Coluna', titulo: 'Título', descricao: 'Descrição', prazo: 'Prazo' };
+var CAB_KCARDS = ['Projeto', 'Coluna', 'Título', 'Descrição', 'Prazo', 'Prioridade', 'Responsável', 'Etiquetas', 'Bloqueado'];
+var COL_KCARDS = {
+  projeto: 'Projeto', coluna: 'Coluna', titulo: 'Título', descricao: 'Descrição', prazo: 'Prazo',
+  prioridade: 'Prioridade', responsavel: 'Responsável', etiquetas: 'Etiquetas', bloqueado: 'Bloqueado'
+};
 
 var NOME_ABA_KFASES = 'KanbanFases';
-var CAB_KFASES = ['Projeto', 'Fase', 'Início', 'Fim', 'Progresso'];
-var COL_KFASES = { projeto: 'Projeto', fase: 'Fase', inicio: 'Início', fim: 'Fim', progresso: 'Progresso' };
+var CAB_KFASES = ['Projeto', 'Fase', 'Subtítulo', 'Início', 'Fim', 'Progresso', 'Marco'];
+var COL_KFASES = {
+  projeto: 'Projeto', fase: 'Fase', subtitulo: 'Subtítulo', inicio: 'Início', fim: 'Fim', progresso: 'Progresso', marco: 'Marco'
+};
 
 /** Lê tudo do Kanban: projetos, cartões e fases. Chamado pelo cliente. */
 function obterKanban() {
@@ -986,7 +993,8 @@ function obterKanban() {
       return {
         nome: deCelula_(r[mapa[COL_KPROJ.nome] - 1]),
         descricao: deCelula_(r[mapa[COL_KPROJ.descricao] - 1]),
-        criado: deCelula_(r[mapa[COL_KPROJ.criado] - 1])
+        criado: deCelula_(r[mapa[COL_KPROJ.criado] - 1]),
+        colunas: deCelula_(r[mapa[COL_KPROJ.colunas] - 1]) || COLUNAS_KANBAN_PADRAO
       };
     }),
     cards: lerAba_(NOME_ABA_KCARDS, CAB_KCARDS, COL_KCARDS, function (r, mapa) {
@@ -995,16 +1003,22 @@ function obterKanban() {
         coluna: deCelula_(r[mapa[COL_KCARDS.coluna] - 1]),
         titulo: deCelula_(r[mapa[COL_KCARDS.titulo] - 1]),
         descricao: deCelula_(r[mapa[COL_KCARDS.descricao] - 1]),
-        prazo: deCelula_(r[mapa[COL_KCARDS.prazo] - 1])
+        prazo: deCelula_(r[mapa[COL_KCARDS.prazo] - 1]),
+        prioridade: deCelula_(r[mapa[COL_KCARDS.prioridade] - 1]),
+        responsavel: deCelula_(r[mapa[COL_KCARDS.responsavel] - 1]),
+        etiquetas: deCelula_(r[mapa[COL_KCARDS.etiquetas] - 1]),
+        bloqueado: ehVerdadeiro_(r[mapa[COL_KCARDS.bloqueado] - 1])
       };
     }),
     fases: lerAba_(NOME_ABA_KFASES, CAB_KFASES, COL_KFASES, function (r, mapa) {
       return {
         projeto: deCelula_(r[mapa[COL_KFASES.projeto] - 1]),
         fase: deCelula_(r[mapa[COL_KFASES.fase] - 1]),
+        subtitulo: deCelula_(r[mapa[COL_KFASES.subtitulo] - 1]),
         inicio: deCelula_(r[mapa[COL_KFASES.inicio] - 1]),
         fim: deCelula_(r[mapa[COL_KFASES.fim] - 1]),
-        progresso: Number(r[mapa[COL_KFASES.progresso] - 1]) || 0
+        progresso: Number(r[mapa[COL_KFASES.progresso] - 1]) || 0,
+        marco: ehVerdadeiro_(r[mapa[COL_KFASES.marco] - 1])
       };
     })
   };
@@ -1041,7 +1055,25 @@ function criarProjeto(nome, descricao) {
     row[mapa[COL_KPROJ.nome] - 1] = nome;
     row[mapa[COL_KPROJ.descricao] - 1] = descricao || '';
     row[mapa[COL_KPROJ.criado] - 1] = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    row[mapa[COL_KPROJ.colunas] - 1] = COLUNAS_KANBAN_PADRAO;
     aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
+    return obterKanban();
+  } finally { lock.releaseLock(); }
+}
+
+/** Salva a configuração de colunas de um projeto ("Nome:wip|Nome:wip"). */
+function salvarColunasProjeto(nome, colunas) {
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_KPROJ, CAB_KPROJ);
+    var mapa = obterMapaColunasPor_(aba, CAB_KPROJ);
+    var ultima = aba.getLastRow();
+    for (var l = 2; l <= ultima; l++) {
+      if (String(aba.getRange(l, mapa[COL_KPROJ.nome]).getValue()).trim() === String(nome).trim()) {
+        aba.getRange(l, mapa[COL_KPROJ.colunas]).setValue(colunas || COLUNAS_KANBAN_PADRAO);
+        break;
+      }
+    }
     return obterKanban();
   } finally { lock.releaseLock(); }
 }
@@ -1085,6 +1117,10 @@ function salvarCard(c) {
     row[mapa[COL_KCARDS.titulo] - 1] = c.titulo || '';
     row[mapa[COL_KCARDS.descricao] - 1] = c.descricao || '';
     row[mapa[COL_KCARDS.prazo] - 1] = c.prazo ? paraCelula_(c.prazo) : '';
+    row[mapa[COL_KCARDS.prioridade] - 1] = c.prioridade || '';
+    row[mapa[COL_KCARDS.responsavel] - 1] = c.responsavel || '';
+    row[mapa[COL_KCARDS.etiquetas] - 1] = c.etiquetas || '';
+    row[mapa[COL_KCARDS.bloqueado] - 1] = c.bloqueado ? true : false;
     aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
     return obterKanban();
   } finally { lock.releaseLock(); }
@@ -1126,9 +1162,11 @@ function salvarFase(f) {
     var row = novo ? novaLinhaVazia_(aba.getLastColumn()) : aba.getRange(linha, 1, 1, aba.getLastColumn()).getValues()[0];
     row[mapa[COL_KFASES.projeto] - 1] = f.projeto || '';
     row[mapa[COL_KFASES.fase] - 1] = f.fase || '';
+    row[mapa[COL_KFASES.subtitulo] - 1] = f.subtitulo || '';
     row[mapa[COL_KFASES.inicio] - 1] = f.inicio ? paraCelula_(f.inicio) : '';
     row[mapa[COL_KFASES.fim] - 1] = f.fim ? paraCelula_(f.fim) : '';
     row[mapa[COL_KFASES.progresso] - 1] = Math.max(0, Math.min(100, Number(f.progresso) || 0));
+    row[mapa[COL_KFASES.marco] - 1] = f.marco ? true : false;
     aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
     return obterKanban();
   } finally { lock.releaseLock(); }

@@ -506,6 +506,51 @@
   .gantt-hoje { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--critical); z-index: 3; }
   .gantt-hoje::after { content: 'hoje'; position: absolute; top: -1px; left: 3px; font-size: 9.5px; font-weight: 700; color: var(--critical); }
   .gantt-vazio { padding: 40px 20px; text-align: center; color: var(--muted); }
+
+  /* ---- Kanban: barra de ferramentas e cartões enriquecidos ---- */
+  .kb-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .kb-toolbar .busca { flex: 1 1 220px; min-width: 160px; }
+  .kb-toolbar select { min-width: 120px; }
+  .kb-chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .kb-chip { font-size: 10.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+  .kb-tag { font-size: 10.5px; padding: 1px 7px; border-radius: 6px; background: var(--surface-3); color: var(--ink-2); font-weight: 600; }
+  .kb-bloq { font-size: 10.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: rgba(220,38,38,.14); color: var(--critical); }
+  .kb-card.bloq { box-shadow: inset 0 0 0 1.5px rgba(220,38,38,.45); }
+  .kb-card .rodape { justify-content: flex-start; }
+  .kb-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent-suave); color: var(--accent); font-size: 10px; font-weight: 700; display: grid; place-items: center; flex: none; }
+  .kb-card .rodape .dir { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  /* Modal de colunas */
+  .col-linha { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .col-linha input.nome { flex: 1; }
+  .col-linha input.wip { width: 78px; }
+  .col-linha .rm { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 4px 6px; border-radius: 6px; }
+  .col-linha .rm:hover { color: var(--critical); background: rgba(220,38,38,.10); }
+
+  /* ---- Gantt com zoom (px, rolagem horizontal, coluna fixa) ---- */
+  .gantt-scroll { overflow-x: auto; border: 1px solid var(--hairline); border-radius: 12px; background: var(--surface); }
+  .gantt-inner { position: relative; }
+  .g-row { display: flex; border-bottom: 1px solid var(--hairline); }
+  .g-row:last-child { border-bottom: none; }
+  .g-head { position: sticky; top: 0; z-index: 5; }
+  .g-label { flex: none; box-sizing: border-box; padding: 9px 12px; position: sticky; left: 0; background: var(--surface); z-index: 2; border-right: 1px solid var(--hairline); }
+  .g-head .g-label { z-index: 6; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); display: flex; align-items: center; }
+  .g-label .nome { font-weight: 600; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
+  .g-label .nome:hover { color: var(--accent); }
+  .g-label .sub { color: var(--ink-2); font-size: 11.5px; overflow-wrap: anywhere; }
+  .g-label .datas { color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .g-track { position: relative; box-sizing: border-box; flex: none; }
+  .g-axis { display: flex; }
+  .g-unit { border-left: 1px solid var(--hairline); box-sizing: border-box; font-size: 11px; color: var(--ink-2); padding: 8px 6px; white-space: nowrap; font-weight: 600; overflow: hidden; }
+  .g-grid { position: absolute; inset: 0; display: flex; pointer-events: none; }
+  .g-grid > span { border-left: 1px solid var(--hairline); box-sizing: border-box; }
+  .g-faixa { position: relative; height: 46px; }
+  .g-bar { position: absolute; top: 11px; height: 24px; border-radius: 7px; overflow: hidden; display: flex; align-items: center; cursor: pointer; box-shadow: 0 1px 3px rgba(70,52,30,.22); min-width: 8px; z-index: 1; }
+  .g-prog { position: absolute; inset: 0; background: rgba(255,255,255,.34); border-right: 2px solid rgba(255,255,255,.78); }
+  .g-bar .rot { position: relative; z-index: 1; font-size: 11px; font-weight: 700; color: #fff; padding: 0 8px; white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,.3); }
+  .g-marco { position: absolute; top: 12px; width: 20px; height: 20px; transform: translateX(-10px) rotate(45deg); border-radius: 4px; cursor: pointer; box-shadow: 0 1px 3px rgba(70,52,30,.3); z-index: 2; }
+  .g-hoje { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--critical); z-index: 3; }
+  .g-hoje::after { content: 'hoje'; position: absolute; top: 2px; left: 3px; font-size: 9.5px; font-weight: 700; color: var(--critical); }
 </style>
 </head>
 <body>
