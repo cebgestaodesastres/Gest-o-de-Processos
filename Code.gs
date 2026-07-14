@@ -954,3 +954,193 @@ function primeiroParagrafo_(texto) {
   }
   return '';
 }
+/* ==========================================================================
+ * Kanban — quadros de projeto (aba "Kanban") + cronograma de fases (Gantt).
+ *
+ * Metodologia (referências pesquisadas):
+ *   - Kanban: colunas de fluxo (A fazer › Fazendo › Revisão › Concluído) com
+ *     limite de trabalho em progresso (WIP) nas colunas de trabalho — Atlassian,
+ *     businessmap.io, teamhood.
+ *   - Gantt: cada fase é uma barra no eixo do tempo, com % concluído e marco de
+ *     "hoje" — Asana, TeamGantt, Atlassian.
+ *
+ * Três abas de dados: KanbanProjetos, KanbanCards e KanbanFases.
+ * ======================================================================== */
+
+var NOME_ABA_KPROJ = 'KanbanProjetos';
+var CAB_KPROJ = ['Nome', 'Descrição', 'Criado'];
+var COL_KPROJ = { nome: 'Nome', descricao: 'Descrição', criado: 'Criado' };
+
+var NOME_ABA_KCARDS = 'KanbanCards';
+var CAB_KCARDS = ['Projeto', 'Coluna', 'Título', 'Descrição', 'Prazo'];
+var COL_KCARDS = { projeto: 'Projeto', coluna: 'Coluna', titulo: 'Título', descricao: 'Descrição', prazo: 'Prazo' };
+
+var NOME_ABA_KFASES = 'KanbanFases';
+var CAB_KFASES = ['Projeto', 'Fase', 'Início', 'Fim', 'Progresso'];
+var COL_KFASES = { projeto: 'Projeto', fase: 'Fase', inicio: 'Início', fim: 'Fim', progresso: 'Progresso' };
+
+/** Lê tudo do Kanban: projetos, cartões e fases. Chamado pelo cliente. */
+function obterKanban() {
+  return {
+    projetos: lerAba_(NOME_ABA_KPROJ, CAB_KPROJ, COL_KPROJ, function (r, mapa) {
+      return {
+        nome: deCelula_(r[mapa[COL_KPROJ.nome] - 1]),
+        descricao: deCelula_(r[mapa[COL_KPROJ.descricao] - 1]),
+        criado: deCelula_(r[mapa[COL_KPROJ.criado] - 1])
+      };
+    }),
+    cards: lerAba_(NOME_ABA_KCARDS, CAB_KCARDS, COL_KCARDS, function (r, mapa) {
+      return {
+        projeto: deCelula_(r[mapa[COL_KCARDS.projeto] - 1]),
+        coluna: deCelula_(r[mapa[COL_KCARDS.coluna] - 1]),
+        titulo: deCelula_(r[mapa[COL_KCARDS.titulo] - 1]),
+        descricao: deCelula_(r[mapa[COL_KCARDS.descricao] - 1]),
+        prazo: deCelula_(r[mapa[COL_KCARDS.prazo] - 1])
+      };
+    }),
+    fases: lerAba_(NOME_ABA_KFASES, CAB_KFASES, COL_KFASES, function (r, mapa) {
+      return {
+        projeto: deCelula_(r[mapa[COL_KFASES.projeto] - 1]),
+        fase: deCelula_(r[mapa[COL_KFASES.fase] - 1]),
+        inicio: deCelula_(r[mapa[COL_KFASES.inicio] - 1]),
+        fim: deCelula_(r[mapa[COL_KFASES.fim] - 1]),
+        progresso: Number(r[mapa[COL_KFASES.progresso] - 1]) || 0
+      };
+    })
+  };
+}
+
+/** Helper genérico: lê uma aba e mapeia cada linha (com a linha da planilha). */
+function lerAba_(nomeAba, cabecalhos, colMapa, montar) {
+  var aba = obterAbaPor_(nomeAba, cabecalhos);
+  var mapa = obterMapaColunasPor_(aba, cabecalhos);
+  var ultima = aba.getLastRow();
+  var itens = [];
+  if (ultima >= 2) {
+    var ultCol = aba.getLastColumn();
+    var valores = aba.getRange(2, 1, ultima - 1, ultCol).getValues();
+    valores.forEach(function (r, i) {
+      if (r.every(function (c) { return c === '' || c === null; })) return;
+      var obj = montar(r, mapa);
+      obj.linha = i + 2;
+      itens.push(obj);
+    });
+  }
+  return itens;
+}
+
+function criarProjeto(nome, descricao) {
+  nome = String(nome || '').trim();
+  if (!nome) throw new Error('Informe o nome do projeto.');
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_KPROJ, CAB_KPROJ);
+    var mapa = obterMapaColunasPor_(aba, CAB_KPROJ);
+    var linha = aba.getLastRow() + 1;
+    var row = novaLinhaVazia_(aba.getLastColumn());
+    row[mapa[COL_KPROJ.nome] - 1] = nome;
+    row[mapa[COL_KPROJ.descricao] - 1] = descricao || '';
+    row[mapa[COL_KPROJ.criado] - 1] = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
+    return obterKanban();
+  } finally { lock.releaseLock(); }
+}
+
+function excluirProjeto(nome) {
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    excluirLinhasPorProjeto_(NOME_ABA_KCARDS, CAB_KCARDS, COL_KCARDS.projeto, nome);
+    excluirLinhasPorProjeto_(NOME_ABA_KFASES, CAB_KFASES, COL_KFASES.projeto, nome);
+    var aba = obterAbaPor_(NOME_ABA_KPROJ, CAB_KPROJ);
+    var mapa = obterMapaColunasPor_(aba, CAB_KPROJ);
+    var ultima = aba.getLastRow();
+    for (var l = ultima; l >= 2; l--) {
+      if (String(aba.getRange(l, mapa[COL_KPROJ.nome]).getValue()).trim() === String(nome).trim()) aba.deleteRow(l);
+    }
+    return obterKanban();
+  } finally { lock.releaseLock(); }
+}
+
+function excluirLinhasPorProjeto_(nomeAba, cabecalhos, campoProjeto, nome) {
+  var aba = obterAbaPor_(nomeAba, cabecalhos);
+  var mapa = obterMapaColunasPor_(aba, cabecalhos);
+  var ultima = aba.getLastRow();
+  for (var l = ultima; l >= 2; l--) {
+    if (String(aba.getRange(l, mapa[campoProjeto]).getValue()).trim() === String(nome).trim()) aba.deleteRow(l);
+  }
+}
+
+function salvarCard(c) {
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_KCARDS, CAB_KCARDS);
+    var mapa = obterMapaColunasPor_(aba, CAB_KCARDS);
+    var linha = Number(c.linha);
+    var novo = !(linha >= 2);
+    if (novo) linha = aba.getLastRow() + 1;
+    aba.getRange(linha, mapa[COL_KCARDS.prazo]).setNumberFormat('dd/mm/yyyy');
+    var row = novo ? novaLinhaVazia_(aba.getLastColumn()) : aba.getRange(linha, 1, 1, aba.getLastColumn()).getValues()[0];
+    row[mapa[COL_KCARDS.projeto] - 1] = c.projeto || '';
+    row[mapa[COL_KCARDS.coluna] - 1] = c.coluna || 'A fazer';
+    row[mapa[COL_KCARDS.titulo] - 1] = c.titulo || '';
+    row[mapa[COL_KCARDS.descricao] - 1] = c.descricao || '';
+    row[mapa[COL_KCARDS.prazo] - 1] = c.prazo ? paraCelula_(c.prazo) : '';
+    aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
+    return obterKanban();
+  } finally { lock.releaseLock(); }
+}
+
+function moverCard(linha, coluna) {
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_KCARDS, CAB_KCARDS);
+    var mapa = obterMapaColunasPor_(aba, CAB_KCARDS);
+    linha = Number(linha);
+    if (!(linha >= 2)) throw new Error('Linha inválida.');
+    aba.getRange(linha, mapa[COL_KCARDS.coluna]).setValue(coluna);
+    return obterKanban();
+  } finally { lock.releaseLock(); }
+}
+
+function excluirCard(linha) {
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_KCARDS, CAB_KCARDS);
+    linha = Number(linha);
+    if (!(linha >= 2)) throw new Error('Linha inválida.');
+    aba.deleteRow(linha);
+    return obterKanban();
+  } finally { lock.releaseLock(); }
+}
+
+function salvarFase(f) {
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_KFASES, CAB_KFASES);
+    var mapa = obterMapaColunasPor_(aba, CAB_KFASES);
+    var linha = Number(f.linha);
+    var novo = !(linha >= 2);
+    if (novo) linha = aba.getLastRow() + 1;
+    aba.getRange(linha, mapa[COL_KFASES.inicio]).setNumberFormat('dd/mm/yyyy');
+    aba.getRange(linha, mapa[COL_KFASES.fim]).setNumberFormat('dd/mm/yyyy');
+    var row = novo ? novaLinhaVazia_(aba.getLastColumn()) : aba.getRange(linha, 1, 1, aba.getLastColumn()).getValues()[0];
+    row[mapa[COL_KFASES.projeto] - 1] = f.projeto || '';
+    row[mapa[COL_KFASES.fase] - 1] = f.fase || '';
+    row[mapa[COL_KFASES.inicio] - 1] = f.inicio ? paraCelula_(f.inicio) : '';
+    row[mapa[COL_KFASES.fim] - 1] = f.fim ? paraCelula_(f.fim) : '';
+    row[mapa[COL_KFASES.progresso] - 1] = Math.max(0, Math.min(100, Number(f.progresso) || 0));
+    aba.getRange(linha, 1, 1, aba.getLastColumn()).setValues([row]);
+    return obterKanban();
+  } finally { lock.releaseLock(); }
+}
+
+function excluirFase(linha) {
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var aba = obterAbaPor_(NOME_ABA_KFASES, CAB_KFASES);
+    linha = Number(linha);
+    if (!(linha >= 2)) throw new Error('Linha inválida.');
+    aba.deleteRow(linha);
+    return obterKanban();
+  } finally { lock.releaseLock(); }
+}

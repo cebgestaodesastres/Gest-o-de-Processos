@@ -451,6 +451,61 @@
   .skill-card .acoes button:hover { color: var(--ink); background: var(--surface-3); }
   .skills-vazio { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 40px; }
   .conteudo-skill { background: var(--page); border: 1px solid var(--hairline); border-radius: 10px; padding: 14px; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12.5px; line-height: 1.6; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 52vh; overflow-y: auto; }
+
+  /* ================= Kanban ================= */
+  .kanban-wrap { max-width: 1400px; margin: 0 auto; padding: 24px 20px 48px; }
+  .kanban-topo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .kanban-topo h1 { font-size: 20px; font-weight: 700; }
+  .kanban-topo .proj-sel { min-width: 210px; }
+  .kanban-topo .acoes { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  .kanban-vazio { background: var(--surface); border: 1px dashed var(--hairline); border-radius: 14px; padding: 46px 20px; text-align: center; color: var(--muted); }
+  .kanban-vazio strong { color: var(--ink); display: block; font-size: 15px; margin-bottom: 4px; }
+  .proj-desc { color: var(--muted); font-size: 13px; margin: -6px 0 14px; }
+
+  .kb-board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; align-items: flex-start; }
+  .kb-coluna { flex: 0 0 272px; width: 272px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; display: flex; flex-direction: column; max-height: 74vh; }
+  .kb-col-topo { display: flex; align-items: center; gap: 8px; padding: 11px 13px; border-bottom: 1px solid var(--hairline); font-weight: 700; font-size: 13.5px; }
+  .kb-col-topo .qtd { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 600; background: var(--surface-2); border-radius: 999px; padding: 1px 9px; }
+  .kb-col-topo .qtd.excede { color: var(--critical); background: rgba(220,38,38,.12); }
+  .kb-col-topo .ponto-col { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .kb-lista { padding: 10px; display: flex; flex-direction: column; gap: 9px; overflow-y: auto; flex: 1; min-height: 60px; }
+  .kb-lista.dragover { background: var(--accent-suave); box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0 0 12px 12px; }
+  .kb-card { background: var(--surface-2); border: 1px solid var(--hairline); border-left: 3px solid var(--muted); border-radius: 10px; padding: 10px 12px; cursor: grab; display: flex; flex-direction: column; gap: 6px; }
+  .kb-card:active { cursor: grabbing; }
+  .kb-card.arrastando { opacity: .45; }
+  .kb-card .titulo { font-weight: 600; font-size: 13.5px; overflow-wrap: anywhere; }
+  .kb-card .desc { color: var(--ink-2); font-size: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .kb-card .rodape { display: flex; align-items: center; gap: 8px; }
+  .kb-prazo { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+  .kb-card .mover { margin-left: auto; display: flex; gap: 2px; }
+  .kb-card .mover button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 2px 4px; border-radius: 5px; }
+  .kb-card .mover button:hover { color: var(--ink); background: var(--surface-3); }
+  .kb-add { margin: 2px 10px 12px; }
+  .kb-add button { width: 100%; background: none; border: 1px dashed var(--hairline); color: var(--muted); border-radius: 9px; padding: 8px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; }
+  .kb-add button:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ---------- Cronograma (Gantt) ---------- */
+  .gantt { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 4px 0 12px; overflow-x: auto; }
+  .gantt-cab, .gantt-linha { display: grid; grid-template-columns: 200px 1fr; align-items: center; }
+  .gantt-cab { border-bottom: 1px solid var(--hairline); position: sticky; top: 0; }
+  .gantt-cab .canto { padding: 10px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .gantt-meses { display: flex; position: relative; }
+  .gantt-mes { border-left: 1px solid var(--hairline); padding: 8px 8px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); white-space: nowrap; box-sizing: border-box; }
+  .gantt-linha { border-bottom: 1px solid var(--hairline); }
+  .gantt-linha:last-child { border-bottom: none; }
+  .gantt-fase-info { padding: 10px 14px; min-width: 0; }
+  .gantt-fase-info .nome { font-weight: 600; font-size: 13px; overflow-wrap: anywhere; cursor: pointer; }
+  .gantt-fase-info .nome:hover { color: var(--accent); }
+  .gantt-fase-info .datas { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .gantt-faixa { position: relative; height: 46px; }
+  .gantt-grade { position: absolute; inset: 0; display: flex; }
+  .gantt-grade > span { border-left: 1px solid var(--hairline); box-sizing: border-box; }
+  .gantt-barra { position: absolute; top: 11px; height: 24px; border-radius: 7px; overflow: hidden; min-width: 6px; box-shadow: 0 1px 3px rgba(70,52,30,.18); cursor: pointer; display: flex; align-items: center; }
+  .gantt-prog { position: absolute; inset: 0; width: 0; background: rgba(255,255,255,.32); border-right: 2px solid rgba(255,255,255,.7); }
+  .gantt-barra .rot { position: relative; z-index: 1; font-size: 11px; font-weight: 700; color: #fff; padding: 0 8px; white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,.25); }
+  .gantt-hoje { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--critical); z-index: 3; }
+  .gantt-hoje::after { content: 'hoje'; position: absolute; top: -1px; left: 3px; font-size: 9.5px; font-weight: 700; color: var(--critical); }
+  .gantt-vazio { padding: 40px 20px; text-align: center; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -514,6 +569,7 @@
     </div>
     <button class="nav-item ativo" data-view="processos"><span class="ic">📋</span> Controle de Processos</button>
     <button class="nav-item" data-view="planner"><span class="ic">🗓️</span> Planner</button>
+    <button class="nav-item" data-view="kanban"><span class="ic">🗃️</span> Kanban</button>
     <button class="nav-item" data-view="skills"><span class="ic">🧩</span> Banco de Skills</button>
     <div class="rodape-nav" id="rodapeNav"></div>
   </aside>
@@ -527,6 +583,7 @@
 
     <?!= include('Gestao'); ?>
     <?!= include('Planner'); ?>
+    <?!= include('Kanban'); ?>
     <?!= include('Skills'); ?>
 
   </div><!-- /painel-principal -->
@@ -537,7 +594,7 @@
 
 <script>
   /* ================= Navegação entre telas ================= */
-  var TITULOS_VIEW = { processos: 'Controle de Processos', planner: 'Planner', skills: 'Banco de Skills' };
+  var TITULOS_VIEW = { processos: 'Controle de Processos', planner: 'Planner', kanban: 'Kanban', skills: 'Banco de Skills' };
 
   function trocarView(view) {
     document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('ativa', v.id === 'view-' + view); });
@@ -545,6 +602,7 @@
     $('tituloMobile').textContent = TITULOS_VIEW[view] || '';
     fecharSidebar();
     if (view === 'planner' && !plannerCarregado) carregarPlanner();
+    if (view === 'kanban' && !kanbanCarregado) carregarKanban();
     if (view === 'skills' && !skillsCarregadas) carregarSkills();
   }
   function abrirSidebar() { $('sidebar').classList.add('aberta'); $('fundoSidebar').classList.add('aberto'); }
