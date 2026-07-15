@@ -15,10 +15,12 @@ var NOME_ABA = 'Processos';
 // faltarem — nenhum dado existente é perdido.
 var CABECALHOS = [
   'Processo', 'Link', 'Descrição', 'Status',
-  'Data de mudança de Status', 'Prazo', 'Links relacionados', 'Obs', 'Arquivado'
+  'Data de mudança de Status', 'Prazo', 'Links relacionados', 'Obs', 'Arquivado',
+  'Urgente', 'Modelo'
 ];
 
 // Mapa campo (cliente) -> nome do cabeçalho (planilha).
+// 'dataStatus' guarda a data da última atualização do processo (ver salvarProcesso).
 var COL = {
   processo: 'Processo',
   link: 'Link',
@@ -28,7 +30,9 @@ var COL = {
   prazo: 'Prazo',
   linksRelacionados: 'Links relacionados',
   obs: 'Obs',
-  arquivado: 'Arquivado'
+  arquivado: 'Arquivado',
+  urgente: 'Urgente',
+  modelo: 'Modelo'
 };
 
 // Colunas que guardam datas (formato dd/mm/yyyy).
@@ -207,7 +211,9 @@ function obterProcessos() {
         prazo: deCelula_(r[mapa[COL.prazo] - 1]),
         linksRelacionados: deCelula_(r[mapa[COL.linksRelacionados] - 1]),
         obs: deCelula_(r[mapa[COL.obs] - 1]),
-        arquivado: ehVerdadeiro_(r[mapa[COL.arquivado] - 1])
+        arquivado: ehVerdadeiro_(r[mapa[COL.arquivado] - 1]),
+        urgente: ehVerdadeiro_(r[mapa[COL.urgente] - 1]),
+        modelo: ehVerdadeiro_(r[mapa[COL.modelo] - 1])
       });
     });
   }
@@ -233,6 +239,16 @@ function salvarProcesso(p) {
     var novo = !(linha >= 2);
     if (novo) linha = aba.getLastRow() + 1;
 
+    // Impede número de processo duplicado (ignora '-' e vazios, que são
+    // usados como marcadores sem número). Em edição, ignora a própria linha.
+    var num = String(p.processo || '').trim();
+    if (num && num !== '-' && processoDuplicado_(aba, mapa, num, novo ? 0 : linha)) {
+      throw new Error('DUPLICADO: já existe um processo com o número "' + num + '".');
+    }
+
+    // Data da última atualização: sempre carimba hoje em qualquer criação/edição.
+    var hojeCel = new Date();
+
     var faixa = aba.getRange(linha, 1, 1, ultCol);
     var row = novo ? novaLinhaVazia_(ultCol) : faixa.getValues()[0];
     function set(campo, valor) { row[mapa[COL[campo]] - 1] = valor; }
@@ -241,13 +257,15 @@ function salvarProcesso(p) {
     set('link', p.link || '');
     set('descricao', p.descricao || '');
     set('status', p.status || 'Não iniciado');
-    set('dataStatus', paraCelula_(p.dataStatus || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')));
+    set('dataStatus', hojeCel);
     set('prazo', paraCelula_(p.prazo));
     set('linksRelacionados', p.linksRelacionados || '');
     set('obs', p.obs || '');
-    if (novo) set('arquivado', false);
+    set('urgente', p.urgente ? true : false);
+    if (novo) { set('arquivado', false); set('modelo', false); }
 
     faixa.setValues([row]);
+    aba.getRange(linha, mapa[COL.dataStatus], 1, 1).setNumberFormat('dd/mm/yyyy');
     if (novo) {
       COLS_DATA.forEach(function (n) {
         aba.getRange(linha, mapa[n], 1, 1).setNumberFormat('dd/mm/yyyy');
@@ -307,6 +325,60 @@ function excluirProcesso(linha) {
     linha = Number(linha);
     if (!(linha >= 2)) throw new Error('Linha inválida.');
     aba.deleteRow(linha);
+    return obterProcessos();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Verdadeiro se já existe outra linha (diferente de `linhaIgnorar`) com o mesmo
+ * número de processo. Comparação por texto, sem diferenciar maiúsc./minúsc.
+ */
+function processoDuplicado_(aba, mapa, numero, linhaIgnorar) {
+  var ultima = aba.getLastRow();
+  if (ultima < 2) return false;
+  var col = mapa[COL.processo];
+  var valores = aba.getRange(2, col, ultima - 1, 1).getValues();
+  var alvo = String(numero).trim().toLowerCase();
+  for (var i = 0; i < valores.length; i++) {
+    var linhaAtual = i + 2;
+    if (linhaAtual === Number(linhaIgnorar)) continue;
+    var v = String(valores[i][0] == null ? '' : valores[i][0]).trim().toLowerCase();
+    if (v && v !== '-' && v === alvo) return true;
+  }
+  return false;
+}
+
+/** Marca/desmarca o processo como urgente. */
+function alternarUrgente(linha, urgente) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba = obterAba_();
+    var mapa = obterMapaColunas_(aba);
+    linha = Number(linha);
+    if (!(linha >= 2)) throw new Error('Linha inválida.');
+    aba.getRange(linha, mapa[COL.urgente]).setValue(urgente ? true : false);
+    return obterProcessos();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Envia (modelo=true) ou remove (modelo=false) o processo da aba de Modelos.
+ * Um processo-modelo sai das abas Ativos/Arquivados.
+ */
+function definirModelo(linha, modelo) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba = obterAba_();
+    var mapa = obterMapaColunas_(aba);
+    linha = Number(linha);
+    if (!(linha >= 2)) throw new Error('Linha inválida.');
+    aba.getRange(linha, mapa[COL.modelo]).setValue(modelo ? true : false);
     return obterProcessos();
   } finally {
     lock.releaseLock();

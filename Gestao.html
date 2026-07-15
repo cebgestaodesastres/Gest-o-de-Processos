@@ -7,7 +7,6 @@
       <div class="sub" id="subtitulo">Carregando…</div>
     </div>
     <div class="acoes">
-      <a class="link-planilha" id="linkPlanilha" href="#" target="_blank" rel="noopener" style="display:none">Abrir planilha ↗</a>
       <button class="btn primario" id="btnNovo">+ Novo processo</button>
     </div>
   </div>
@@ -40,6 +39,7 @@
   <div class="abas" id="abas">
     <button class="aba ativa" data-aba="ativos">Ativos<span class="contador" id="contAtivos">0</span></button>
     <button class="aba" data-aba="arquivados">Arquivados<span class="contador" id="contArquivados">0</span></button>
+    <button class="aba" data-aba="modelos">Modelos<span class="contador" id="contModelos">0</span></button>
   </div>
 
   <div class="painel">
@@ -61,7 +61,7 @@
             <th data-col="processo">Processo</th>
             <th data-col="descricao">Descrição</th>
             <th data-col="status">Status</th>
-            <th data-col="dataStatus">Mudança de status</th>
+            <th data-col="dataStatus">Última atualização</th>
             <th data-col="prazo">Prazo</th>
             <th data-col="obs">Obs</th>
             <th data-col="linksRelacionados">Links relacionados</th>
@@ -71,9 +71,13 @@
         <tbody id="corpoTabela"></tbody>
       </table>
     </div>
+    <div class="painel-rodape" id="painelRodape"></div>
   </div>
 </div>
 </section>
+
+<!-- Menu compacto de ações por linha (posicionado sob demanda) -->
+<div class="menu-acoes" id="menuAcoes"></div>
 
 <!-- Modal de cadastro/edição -->
 <div class="fundo-modal" id="fundoForm">
@@ -84,7 +88,8 @@
       <div class="grade">
         <div class="campo">
           <label for="cProcesso">Processo (nº ou identificador)</label>
-          <input id="cProcesso" placeholder="1400.01.0000000/2026-00">
+          <input id="cProcesso" placeholder="1400.01.0000000/2026-00" autocomplete="off">
+          <span class="erro-campo" id="erroProcesso"></span>
         </div>
         <div class="campo">
           <label for="cStatus">Status</label>
@@ -100,9 +105,12 @@
           <textarea id="cDescricao" required></textarea>
         </div>
         <div class="campo">
-          <label for="cDataStatus">Data de mudança de status</label>
-          <input type="date" id="cDataStatus" required>
-          <span class="dica">Atualizada para hoje ao trocar o status.</span>
+          <label>Prioridade</label>
+          <label class="switch-urgente" for="cUrgente">
+            <input type="checkbox" id="cUrgente">
+            <span>🔴 Marcar como urgente</span>
+          </label>
+          <span class="dica">A data de última atualização muda sozinha a cada edição.</span>
         </div>
         <div class="campo">
           <label for="cPrazo">Prazo</label>
@@ -145,10 +153,12 @@
 <script>
   /* ===================== Controle de Processos ===================== */
   var dados = [];
-  var urlPlanilha = '';
   var ordenacao = { col: 'dataStatus', dir: 'desc' };
   var linhaParaExcluir = null;
   var abaAtual = 'ativos';
+  var filtroEspecial = '';        // '', 'vencido' ou 'proximo' (filtros dos tiles de prazo)
+  var PAGINA = 10;                // processos por página
+  var limiteExibicao = PAGINA;    // quantos processos estão visíveis agora
   var DIAS_ALERTA_PRAZO = 2;
   var STATUS_PADRAO = ['Em Andamento', 'Concluído', 'Consulta', 'Não iniciado'];
 
@@ -222,19 +232,26 @@
   }
   function aplicarResposta(resposta) {
     dados = resposta.processos || [];
-    urlPlanilha = resposta.urlPlanilha || '';
-    if (urlPlanilha) {
-      var link = $('linkPlanilha');
-      link.href = urlPlanilha;
-      link.style.display = '';
-    }
     preencherOpcoesStatus();
     renderizar();
   }
 
   // ---------- Abas / filtros ----------
   function dadosDaAba() {
-    return dados.filter(function (p) { return abaAtual === 'arquivados' ? p.arquivado : !p.arquivado; });
+    return dados.filter(function (p) {
+      if (abaAtual === 'modelos') return p.modelo;
+      if (p.modelo) return false; // modelos só aparecem na aba Modelos
+      return abaAtual === 'arquivados' ? p.arquivado : !p.arquivado;
+    });
+  }
+  // Estado de prazo de um processo: 'vencido', 'proximo' ou '' (para os tiles).
+  function estadoPrazo(p) {
+    if (p.status === 'Concluído') return '';
+    var dias = diasAte(p.prazo);
+    if (dias === null) return '';
+    if (dias < 0) return 'vencido';
+    if (dias <= DIAS_ALERTA_PRAZO) return 'proximo';
+    return '';
   }
   function filtrados() {
     var busca = $('fBusca').value.trim().toLowerCase();
@@ -242,6 +259,7 @@
     var de = $('fDe').value, ate = $('fAte').value;
     return dadosDaAba().filter(function (p) {
       if (status && p.status !== status) return false;
+      if (filtroEspecial && estadoPrazo(p) !== filtroEspecial) return false;
       if (de && (!ehData(p.dataStatus) || p.dataStatus < de)) return false;
       if (ate && (!ehData(p.dataStatus) || p.dataStatus > ate)) return false;
       if (busca) {
@@ -271,11 +289,15 @@
   function renderizar() { atualizarAbas(); renderizarTiles(); renderizarTabela(); }
 
   function atualizarAbas() {
-    var ativos = 0, arquivados = 0;
-    dados.forEach(function (p) { p.arquivado ? arquivados++ : ativos++; });
+    var ativos = 0, arquivados = 0, modelos = 0;
+    dados.forEach(function (p) {
+      if (p.modelo) { modelos++; return; }
+      p.arquivado ? arquivados++ : ativos++;
+    });
     $('contAtivos').textContent = ativos;
     $('contArquivados').textContent = arquivados;
-    document.querySelectorAll('.aba').forEach(function (b) { b.classList.toggle('ativa', b.dataset.aba === abaAtual); });
+    $('contModelos').textContent = modelos;
+    document.querySelectorAll('#view-processos .aba').forEach(function (b) { b.classList.toggle('ativa', b.dataset.aba === abaAtual); });
   }
 
   function renderizarTiles() {
@@ -284,23 +306,29 @@
     var porStatus = {};
     base.forEach(function (p) {
       porStatus[p.status] = (porStatus[p.status] || 0) + 1;
-      if (p.status === 'Concluído') return;
-      var dias = diasAte(p.prazo);
-      if (dias === null) return;
-      if (dias < 0) vencidos++;
-      else if (dias <= DIAS_ALERTA_PRAZO) proximos++;
+      var e = estadoPrazo(p);
+      if (e === 'vencido') vencidos++;
+      else if (e === 'proximo') proximos++;
     });
-    var filtroAtual = $('fStatus').value;
-    var html = '<div class="tile"><div class="rotulo">Total</div><div class="valor">' + base.length + '</div></div>';
+    var statusAtual = $('fStatus').value;
+    var semFiltro = !statusAtual && !filtroEspecial;
+
+    // Total: limpa todos os filtros.
+    var html = '<div class="tile clicavel' + (semFiltro ? ' ativo' : '') + '" data-filtro="total">' +
+      '<div class="rotulo">Total</div><div class="valor">' + base.length + '</div></div>';
+
     statusConhecidos().forEach(function (s) {
       if (!porStatus[s]) return;
-      var ativo = filtroAtual === s ? ' ativo' : '';
-      html += '<div class="tile clicavel' + ativo + '" data-status="' + escapar(s) + '">' +
+      var ativo = (statusAtual === s && !filtroEspecial) ? ' ativo' : '';
+      html += '<div class="tile clicavel' + ativo + '" data-filtro="status" data-valor="' + escapar(s) + '">' +
         '<div class="rotulo"><span class="ponto" style="background:' + corDoStatus(s) + '"></span>' + escapar(s) + '</div>' +
         '<div class="valor">' + porStatus[s] + '</div></div>';
     });
-    html += '<div class="tile"><div class="rotulo"><span class="ponto" style="background:var(--critical)"></span>Prazo vencido</div><div class="valor">' + vencidos + '</div></div>';
-    html += '<div class="tile"><div class="rotulo"><span class="ponto" style="background:var(--warning)"></span>Vence em ' + DIAS_ALERTA_PRAZO + ' dias</div><div class="valor">' + proximos + '</div></div>';
+
+    html += '<div class="tile clicavel' + (filtroEspecial === 'vencido' ? ' ativo' : '') + '" data-filtro="vencido">' +
+      '<div class="rotulo"><span class="ponto" style="background:var(--critical)"></span>Prazo vencido</div><div class="valor">' + vencidos + '</div></div>';
+    html += '<div class="tile clicavel' + (filtroEspecial === 'proximo' ? ' ativo' : '') + '" data-filtro="proximo">' +
+      '<div class="rotulo"><span class="ponto" style="background:var(--warning)"></span>Vence em ' + DIAS_ALERTA_PRAZO + ' dias</div><div class="valor">' + proximos + '</div></div>';
     $('tiles').innerHTML = html;
   }
 
@@ -330,9 +358,12 @@
   }
 
   function renderizarTabela() {
+    fecharMenuAcoes();
     var lista = filtrados();
     var col = ordenacao.col, dir = ordenacao.dir === 'asc' ? 1 : -1;
     lista.sort(function (a, b) {
+      // Urgentes sempre no topo, independentemente da ordenação escolhida.
+      if (!!a.urgente !== !!b.urgente) return a.urgente ? -1 : 1;
       var va = (a[col] || '').toLowerCase ? String(a[col] || '').toLowerCase() : a[col];
       var vb = (b[col] || '').toLowerCase ? String(b[col] || '').toLowerCase() : b[col];
       if (col === 'dataStatus' || col === 'prazo') {
@@ -342,44 +373,94 @@
       return va < vb ? -dir : va > vb ? dir : 0;
     });
 
+    if (limiteExibicao > lista.length) limiteExibicao = Math.max(PAGINA, Math.ceil(lista.length / PAGINA) * PAGINA);
+    var visiveis = lista.slice(0, limiteExibicao);
+
     var totalAba = dadosDaAba().length;
-    var rotuloAba = abaAtual === 'arquivados' ? ' arquivados' : '';
+    var rotuloAba = abaAtual === 'arquivados' ? ' arquivados' : (abaAtual === 'modelos' ? ' modelos' : '');
     $('contagem').textContent = lista.length === totalAba
       ? totalAba + ' processos' + rotuloAba
       : lista.length + ' de ' + totalAba + ' processos' + rotuloAba + ' (filtrado)';
     $('subtitulo').textContent = 'Atualizado em ' + formatarData(hojeIso());
 
-    document.querySelectorAll('th[data-col]').forEach(function (th) {
+    document.querySelectorAll('#view-processos th[data-col]').forEach(function (th) {
       th.textContent = th.textContent.replace(/ [↑↓]$/, '');
       if (th.dataset.col === col) th.textContent += dir === 1 ? ' ↑' : ' ↓';
     });
 
     if (!lista.length) {
-      var vazioMsg = abaAtual === 'arquivados' ? 'Nenhum processo arquivado.' : 'Nenhum processo encontrado com os filtros atuais.';
+      var vazioMsg = abaAtual === 'arquivados' ? 'Nenhum processo arquivado.'
+        : (abaAtual === 'modelos' ? 'Nenhum processo-modelo. Envie um processo encerrado para cá pelo menu de ações.'
+        : 'Nenhum processo encontrado com os filtros atuais.');
       $('corpoTabela').innerHTML = '<tr><td colspan="8" class="vazio">' + vazioMsg + '</td></tr>';
+      $('painelRodape').innerHTML = '';
       return;
     }
 
-    $('corpoTabela').innerHTML = lista.map(function (p) {
-      var botaoArquivo = p.arquivado
-        ? '<button class="acao" title="Desarquivar" data-desarquivar="' + p.linha + '">📤</button>'
-        : '<button class="acao" title="Arquivar" data-arquivar="' + p.linha + '">📥</button>';
-      return '<tr>' +
-        '<td data-rotulo="Processo">' + celulaProcesso(p) + '</td>' +
+    $('corpoTabela').innerHTML = visiveis.map(function (p) {
+      var selo = p.urgente ? '<span class="urgente-badge" title="Urgente">URGENTE</span> ' : '';
+      return '<tr' + (p.urgente ? ' class="linha-urgente"' : '') + '>' +
+        '<td data-rotulo="Processo">' + selo + celulaProcesso(p) + '</td>' +
         '<td data-rotulo="Descrição"><span class="desc">' + escapar(p.descricao) + '</span></td>' +
         '<td data-rotulo="Status">' + seletorStatus(p) + '</td>' +
-        '<td class="num" data-rotulo="Mudança de status">' + escapar(formatarData(p.dataStatus)) + '</td>' +
+        '<td class="num" data-rotulo="Última atualização">' + escapar(formatarData(p.dataStatus)) + '</td>' +
         '<td data-rotulo="Prazo">' + celulaPrazo(p) + '</td>' +
         '<td data-rotulo="Obs"><span class="obs">' + escapar(p.obs) + '</span></td>' +
         '<td data-rotulo="Links relacionados">' + celulaLinks(p) + '</td>' +
         '<td class="acoes-col">' +
-          '<button class="acao" title="Editar" data-editar="' + p.linha + '">✏️</button>' +
-          '<button class="acao" title="Inserir no planner" data-planner="' + p.linha + '">🗓️</button>' +
-          '<button class="acao" title="Inserir no Kanban" data-kanban="' + p.linha + '">🗃️</button>' +
-          botaoArquivo +
-          '<button class="acao excluir" title="Excluir" data-excluir="' + p.linha + '">🗑️</button>' +
+          '<button class="acao kebab" title="Ações" data-menu="' + p.linha + '">⋮</button>' +
         '</td></tr>';
     }).join('');
+
+    // Rodapé "Ver mais" quando há mais itens do que o limite atual.
+    if (lista.length > limiteExibicao) {
+      var restantes = lista.length - limiteExibicao;
+      var proximo = Math.min(PAGINA, restantes);
+      $('painelRodape').innerHTML =
+        '<button class="btn ver-mais" id="btnVerMais">Ver mais ' + proximo +
+        ' <span class="vm-info">(' + limiteExibicao + ' de ' + lista.length + ')</span></button>';
+    } else {
+      $('painelRodape').innerHTML = '';
+    }
+  }
+
+  // ---------- Menu de ações por linha ----------
+  function fecharMenuAcoes() { var m = $('menuAcoes'); if (m) m.classList.remove('aberto'); }
+
+  function abrirMenuAcoes(linha, botao) {
+    var p = dados.find(function (x) { return x.linha == linha; });
+    if (!p) return;
+    var itens = [];
+    itens.push({ ic: '✏️', txt: 'Editar', attr: 'data-editar="' + p.linha + '"' });
+    itens.push({ ic: p.urgente ? '⚪' : '🔴', txt: p.urgente ? 'Remover urgente' : 'Marcar urgente', attr: 'data-urgente="' + p.linha + '" data-valor="' + (p.urgente ? '0' : '1') + '"' });
+    itens.push({ ic: '🗓️', txt: 'Inserir no Planner', attr: 'data-planner="' + p.linha + '"' });
+    itens.push({ ic: '🗃️', txt: 'Inserir no Kanban', attr: 'data-kanban="' + p.linha + '"' });
+    if (p.modelo) {
+      itens.push({ ic: '♻️', txt: 'Usar como modelo', attr: 'data-usarmodelo="' + p.linha + '"' });
+      itens.push({ ic: '↩️', txt: 'Tirar de Modelos', attr: 'data-modelo="' + p.linha + '" data-valor="0"' });
+    } else {
+      itens.push({ ic: p.arquivado ? '📤' : '📥', txt: p.arquivado ? 'Desarquivar' : 'Arquivar', attr: (p.arquivado ? 'data-desarquivar' : 'data-arquivar') + '="' + p.linha + '"' });
+      itens.push({ ic: '📁', txt: 'Enviar para Modelos', attr: 'data-modelo="' + p.linha + '" data-valor="1"' });
+    }
+    itens.push({ sep: true });
+    itens.push({ ic: '🗑️', txt: 'Excluir', attr: 'data-excluir="' + p.linha + '"', perigo: true });
+
+    var m = $('menuAcoes');
+    m.innerHTML = itens.map(function (it) {
+      if (it.sep) return '<div class="mi-sep"></div>';
+      return '<button class="mi' + (it.perigo ? ' perigo' : '') + '" ' + it.attr + '>' +
+        '<span class="mi-ic">' + it.ic + '</span>' + it.txt + '</button>';
+    }).join('');
+
+    // Mostra para medir, depois posiciona junto ao botão (à esquerda, abrindo p/ baixo).
+    m.classList.add('aberto');
+    var r = botao.getBoundingClientRect();
+    var larg = m.offsetWidth, alt = m.offsetHeight;
+    var left = Math.max(8, r.right - larg);
+    var top = r.bottom + 4;
+    if (top + alt > window.innerHeight - 8) top = Math.max(8, r.top - alt - 4);
+    m.style.left = left + 'px';
+    m.style.top = top + 'px';
   }
 
   // ---------- Formulário ----------
@@ -395,11 +476,11 @@
     for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === status) { existe = true; break; } }
     if (status && !existe) sel.add(new Option(status, status));
     sel.value = status;
-    $('cStatus').dataset.original = $('cStatus').value;
-    $('cDataStatus').value = p && ehData(p.dataStatus) ? p.dataStatus : hojeIso();
     $('cPrazo').value = p && ehData(p.prazo) ? p.prazo : '';
     $('cLinksRelacionados').value = p ? (p.linksRelacionados || '') : '';
     $('cObs').value = p ? p.obs : '';
+    $('cUrgente').checked = !!(p && p.urgente);
+    limparErroProcesso();
 
     var edicao = !!p;
     $('btnExcluirForm').style.display = edicao ? '' : 'none';
@@ -427,38 +508,82 @@
   $('btnCancelar').addEventListener('click', fecharForm);
   $('fundoForm').addEventListener('click', function (e) { if (e.target === this) fecharForm(); });
 
-  $('cStatus').addEventListener('change', function () {
-    if (this.value !== this.dataset.original) $('cDataStatus').value = hojeIso();
-  });
+  // ---------- Validação de nº de processo duplicado ----------
+  function mostrarErroProcesso(msg) {
+    $('erroProcesso').textContent = msg;
+    $('cProcesso').classList.add('invalido');
+  }
+  function limparErroProcesso() {
+    $('erroProcesso').textContent = '';
+    $('cProcesso').classList.remove('invalido');
+  }
+  // Verdadeiro se `num` já existe em outro processo (ignora '-' e a própria linha).
+  function numeroJaExiste(num, linhaAtual) {
+    var alvo = String(num || '').trim().toLowerCase();
+    if (!alvo || alvo === '-') return false;
+    return dados.some(function (p) {
+      if (String(p.linha) === String(linhaAtual)) return false;
+      return String(p.processo || '').trim().toLowerCase() === alvo;
+    });
+  }
+  $('cProcesso').addEventListener('input', limparErroProcesso);
 
   $('formProcesso').addEventListener('submit', function (e) {
     e.preventDefault();
+    var linhaAtual = $('cLinha').value || null;
+    var numero = $('cProcesso').value.trim();
+
+    if (numeroJaExiste(numero, linhaAtual)) {
+      mostrarErroProcesso('Este número de processo já foi incluído.');
+      $('cProcesso').focus();
+      return;
+    }
+
     var p = {
-      linha: $('cLinha').value || null,
-      processo: $('cProcesso').value.trim() || '-',
+      linha: linhaAtual,
+      processo: numero || '-',
       link: $('cLink').value.trim(),
       descricao: $('cDescricao').value.trim(),
       status: $('cStatus').value.trim() || 'Não iniciado',
-      dataStatus: $('cDataStatus').value,
       prazo: $('cPrazo').value || '-',
       linksRelacionados: $('cLinksRelacionados').value.trim(),
-      obs: $('cObs').value.trim()
+      obs: $('cObs').value.trim(),
+      urgente: $('cUrgente').checked
     };
-    fecharForm();
-    chamarServidor('salvarProcesso', [p], p.linha ? 'Processo atualizado.' : 'Processo criado.');
+    // Salva com tratamento específico para duplicidade detectada no servidor.
+    carregando(true);
+    google.script.run
+      .withSuccessHandler(function (resp) { carregando(false); fecharForm(); aplicarResposta(resp); toast(p.linha ? 'Processo atualizado.' : 'Processo criado.'); })
+      .withFailureHandler(function (erro) {
+        carregando(false);
+        if (erro && /DUPLICADO/.test(erro.message || '')) { mostrarErroProcesso('Este número de processo já foi incluído.'); $('cProcesso').focus(); }
+        else { toast('Erro: ' + (erro && erro.message), true); }
+      })
+      .salvarProcesso(p);
   });
 
-  ['fBusca', 'fStatus', 'fDe', 'fAte'].forEach(function (id) { $(id).addEventListener('input', renderizar); });
+  function renderizarComReset() { limiteExibicao = PAGINA; renderizar(); }
+  ['fBusca', 'fStatus', 'fDe', 'fAte'].forEach(function (id) { $(id).addEventListener('input', renderizarComReset); });
   $('btnLimpar').addEventListener('click', function () {
     $('fBusca').value = ''; $('fStatus').value = ''; $('fDe').value = ''; $('fAte').value = '';
-    renderizar();
+    filtroEspecial = ''; renderizarComReset();
   });
 
   $('tiles').addEventListener('click', function (e) {
     var tile = e.target.closest('.tile.clicavel');
     if (!tile) return;
-    var s = tile.dataset.status;
-    $('fStatus').value = $('fStatus').value === s ? '' : s;
+    var tipo = tile.dataset.filtro;
+    if (tipo === 'total') {
+      $('fStatus').value = ''; filtroEspecial = '';
+    } else if (tipo === 'status') {
+      var s = tile.dataset.valor;
+      $('fStatus').value = ($('fStatus').value === s && !filtroEspecial) ? '' : s;
+      filtroEspecial = '';
+    } else { // 'vencido' ou 'proximo'
+      filtroEspecial = (filtroEspecial === tipo) ? '' : tipo;
+      $('fStatus').value = '';
+    }
+    limiteExibicao = PAGINA;
     renderizar();
   });
 
@@ -479,31 +604,52 @@
     $('fundoConfirmar').classList.add('aberto');
   }
 
+  // Abre o menu de ações ao clicar no "⋮".
   $('corpoTabela').addEventListener('click', function (e) {
-    var btnEditar = e.target.closest('[data-editar]');
-    if (btnEditar) {
-      var p = dados.find(function (x) { return x.linha == btnEditar.dataset.editar; });
-      if (p) abrirForm(p);
-      return;
-    }
-    var btnArquivar = e.target.closest('[data-arquivar]');
-    if (btnArquivar) { chamarServidor('arquivarProcesso', [Number(btnArquivar.dataset.arquivar), true], 'Processo arquivado.'); return; }
-    var btnDesarquivar = e.target.closest('[data-desarquivar]');
-    if (btnDesarquivar) { chamarServidor('arquivarProcesso', [Number(btnDesarquivar.dataset.desarquivar), false], 'Processo desarquivado.'); return; }
-    var btnPlanner = e.target.closest('[data-planner]');
-    if (btnPlanner) {
-      var pp = dados.find(function (x) { return x.linha == btnPlanner.dataset.planner; });
-      if (pp && typeof inserirProcessoNoPlanner === 'function') inserirProcessoNoPlanner(pp);
-      return;
-    }
-    var btnKanban = e.target.closest('[data-kanban]');
-    if (btnKanban) {
-      var pk = dados.find(function (x) { return x.linha == btnKanban.dataset.kanban; });
-      if (pk && typeof inserirProcessoNoKanban === 'function') inserirProcessoNoKanban(pk);
-      return;
-    }
-    var btnExcluir = e.target.closest('[data-excluir]');
-    if (btnExcluir) pedirExclusao(btnExcluir.dataset.excluir);
+    var kebab = e.target.closest('[data-menu]');
+    if (kebab) { e.stopPropagation(); abrirMenuAcoes(kebab.dataset.menu, kebab); }
+  });
+
+  // Executa a ação escolhida no menu.
+  $('menuAcoes').addEventListener('click', function (e) {
+    var alvo = e.target.closest('[data-editar],[data-urgente],[data-planner],[data-kanban],[data-arquivar],[data-desarquivar],[data-modelo],[data-usarmodelo],[data-excluir]');
+    if (!alvo) return;
+    fecharMenuAcoes();
+    var d = alvo.dataset;
+    if (d.editar != null) { var p = dados.find(function (x) { return x.linha == d.editar; }); if (p) abrirForm(p); return; }
+    if (d.urgente != null) { chamarServidor('alternarUrgente', [Number(d.urgente), d.valor === '1'], d.valor === '1' ? 'Marcado como urgente.' : 'Urgência removida.'); return; }
+    if (d.planner != null) { var pp = dados.find(function (x) { return x.linha == d.planner; }); if (pp && typeof inserirProcessoNoPlanner === 'function') inserirProcessoNoPlanner(pp); return; }
+    if (d.kanban != null) { var pk = dados.find(function (x) { return x.linha == d.kanban; }); if (pk && typeof inserirProcessoNoKanban === 'function') inserirProcessoNoKanban(pk); return; }
+    if (d.arquivar != null) { chamarServidor('arquivarProcesso', [Number(d.arquivar), true], 'Processo arquivado.'); return; }
+    if (d.desarquivar != null) { chamarServidor('arquivarProcesso', [Number(d.desarquivar), false], 'Processo desarquivado.'); return; }
+    if (d.modelo != null) { chamarServidor('definirModelo', [Number(d.modelo), d.valor === '1'], d.valor === '1' ? 'Enviado para Modelos.' : 'Removido de Modelos.'); return; }
+    if (d.usarmodelo != null) { var pm = dados.find(function (x) { return x.linha == d.usarmodelo; }); if (pm) usarComoModelo(pm); return; }
+    if (d.excluir != null) { pedirExclusao(d.excluir); return; }
+  });
+
+  // Fecha o menu ao clicar fora, rolar ou redimensionar.
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#menuAcoes') && !e.target.closest('[data-menu]')) fecharMenuAcoes();
+  });
+  window.addEventListener('resize', fecharMenuAcoes);
+  document.addEventListener('scroll', fecharMenuAcoes, true);
+
+  // Cria um novo processo a partir de um modelo (não altera o modelo original).
+  function usarComoModelo(p) {
+    abrirForm(null);
+    $('cProcesso').value = '';
+    $('cDescricao').value = p.descricao || '';
+    $('cLink').value = '';
+    $('cPrazo').value = '';
+    $('cLinksRelacionados').value = p.linksRelacionados || '';
+    $('cObs').value = p.obs || '';
+    var sel = $('cStatus'); if (sel) sel.value = 'Não iniciado';
+    toast('Novo processo a partir do modelo. Preencha o número e salve.');
+  }
+
+  // Botão "Ver mais": abre mais uma página.
+  $('painelRodape').addEventListener('click', function (e) {
+    if (e.target.closest('#btnVerMais')) { limiteExibicao += PAGINA; renderizarTabela(); }
   });
 
   $('corpoTabela').addEventListener('change', function (e) {
@@ -516,6 +662,8 @@
     var aba = e.target.closest('.aba');
     if (!aba) return;
     abaAtual = aba.dataset.aba;
+    filtroEspecial = ''; $('fStatus').value = '';
+    limiteExibicao = PAGINA;
     renderizar();
   });
 
