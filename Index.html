@@ -6,22 +6,29 @@
 <base target="_top">
 <style>
   :root {
-    --page: #e8ddce;          /* fundo nude / bege claro */
-    --surface: #faf5ee;       /* cartões (creme) */
-    --surface-2: #f1e7d8;     /* realce suave */
-    --surface-3: #e6d8c4;     /* hover / trilhos */
-    --ink: #302620;           /* texto principal (marrom-carvão) */
-    --ink-2: #5f5346;         /* texto secundário */
-    --muted: #9a8b76;         /* apoio */
-    --hairline: rgba(85, 62, 35, 0.16);
-    --accent: #2f6fed;        /* azul familiar (acento) */
-    --accent-suave: rgba(47, 111, 237, 0.12);
+    /* ===== Identidade institucional ===== */
+    --marca-cinza-1: #434A4F;   /* cinza escuro institucional */
+    --marca-cinza-2: #606A70;   /* cinza médio institucional */
+    --marca-off-white: #F1E9E2; /* off-white institucional */
+    --marca-laranja-1: #F47920; /* laranja principal */
+    --marca-laranja-2: #F7941E; /* laranja secundário */
+
+    --page: var(--marca-off-white); /* fundo off-white institucional */
+    --surface: #ffffff;             /* cartões brancos */
+    --surface-2: #f7f1ea;           /* realce suave */
+    --surface-3: #e9ded1;           /* hover / trilhos */
+    --ink: var(--marca-cinza-1);    /* texto principal (cinza institucional) */
+    --ink-2: var(--marca-cinza-2);  /* texto secundário */
+    --muted: #949ba1;               /* apoio */
+    --hairline: rgba(67, 74, 79, 0.16);
+    --accent: var(--marca-laranja-1);   /* laranja institucional (acento) */
+    --accent-suave: rgba(244, 121, 32, 0.12);
     --good: #12a150;
     --warning: #b7791f;
     --critical: #dc2626;
     --violet: #6d4fd0;
     --aqua: #0d9488;
-    --laranja: #d9662a;
+    --laranja: var(--marca-laranja-2);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
@@ -84,7 +91,7 @@
   /* ---------- Toast / carregando (compartilhado) ---------- */
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-    background: #302620; border: 1px solid rgba(255,255,255,.12); color: #fdf7ee;
+    background: var(--marca-cinza-1); border: 1px solid rgba(255,255,255,.14); color: #ffffff;
     padding: 10px 18px; border-radius: 10px; font-size: 13.5px; opacity: 0;
     box-shadow: 0 8px 24px rgba(70,52,30,.22);
     transition: all .25s ease; z-index: 100; pointer-events: none;
@@ -102,27 +109,27 @@
   /* ================= Layout com barra lateral ================= */
   .app { display: flex; min-height: 100vh; }
   .sidebar {
-    width: 232px; flex: none; background: var(--surface); border-right: 1px solid var(--hairline);
+    width: 232px; flex: none; background: var(--marca-cinza-1); border-right: 1px solid rgba(0,0,0,.18);
     display: flex; flex-direction: column; gap: 6px; padding: 20px 14px;
     position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 60;
   }
   .sidebar .marca { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; }
   .sidebar .marca .logo {
     width: 34px; height: 34px; flex: none; border-radius: 9px; display: grid; place-items: center;
-    background: linear-gradient(135deg, var(--accent), var(--violet)); font-size: 18px;
+    background: linear-gradient(135deg, var(--marca-laranja-1), var(--marca-laranja-2)); font-size: 18px;
   }
-  .sidebar .marca .nome { font-size: 14.5px; font-weight: 700; line-height: 1.2; }
-  .sidebar .marca .nome small { display: block; color: var(--muted); font-size: 11px; font-weight: 500; }
+  .sidebar .marca .nome { font-size: 14.5px; font-weight: 700; line-height: 1.2; color: #fff; }
+  .sidebar .marca .nome small { display: block; color: rgba(255,255,255,.58); font-size: 11px; font-weight: 500; }
   .nav-item {
     display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
-    background: none; border: none; color: var(--ink-2); cursor: pointer;
+    background: none; border: none; color: rgba(255,255,255,.76); cursor: pointer;
     padding: 10px 12px; border-radius: 9px; font-size: 13.5px; font-weight: 600;
     font-family: inherit; transition: background .12s ease, color .12s ease;
   }
   .nav-item .ic { font-size: 17px; width: 22px; text-align: center; flex: none; }
-  .nav-item:hover { background: var(--surface-2); color: var(--ink); }
-  .nav-item.ativo { background: var(--accent-suave); color: var(--accent); }
-  .sidebar .rodape-nav { margin-top: auto; color: var(--muted); font-size: 11px; padding: 12px 10px 2px; }
+  .nav-item:hover { background: rgba(255,255,255,.09); color: #fff; }
+  .nav-item.ativo { background: rgba(244,121,32,.18); color: var(--marca-laranja-2); box-shadow: inset 3px 0 0 var(--marca-laranja-1); }
+  .sidebar .rodape-nav { margin-top: auto; color: rgba(255,255,255,.42); font-size: 11px; padding: 12px 10px 2px; }
 
   .painel-principal { flex: 1 1 auto; min-width: 0; }
   .view { display: none; }
@@ -206,7 +213,7 @@
   th.acoes-col { z-index: 3; }
   tbody tr:hover td.acoes-col { background: var(--surface-2); }
 
-  a.link-ext { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(57, 135, 229, 0.35); }
+  a.link-ext { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(244, 121, 32, 0.35); }
   a.link-ext:hover { border-bottom-color: var(--accent); }
   td .proc a.link-ext { color: var(--accent); }
   .links-rel { display: flex; flex-direction: column; gap: 4px; }
@@ -288,7 +295,7 @@
   /* Visão anual: 12 mini-meses */
   .mini-grade-ano { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 14px; }
   .mini-mes { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 12px 12px 14px; }
-  .mini-mes.tem-hoje { border-color: rgba(47,111,237,.55); box-shadow: 0 0 0 1px rgba(47,111,237,.25) inset; }
+  .mini-mes.tem-hoje { border-color: rgba(244,121,32,.55); box-shadow: 0 0 0 1px rgba(244,121,32,.25) inset; }
   .mini-mes h4 { font-size: 13.5px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; cursor: pointer; }
   .mini-mes h4:hover { color: var(--accent); }
   .mini-mes h4 .cont { color: var(--muted); font-size: 10.5px; font-weight: 600; min-width: 14px; text-align: right; }
@@ -432,7 +439,7 @@
   .skills-topo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
   .skills-topo h1 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
   .skills-topo .sub { color: var(--muted); font-size: 13px; }
-  .btn-upload { flex: none; width: 46px; height: 46px; border-radius: 12px; border: 1px solid transparent; background: var(--accent); color: #fff; font-size: 20px; cursor: pointer; display: grid; place-items: center; transition: filter .12s ease, transform .12s ease; box-shadow: 0 4px 12px rgba(47,111,237,.3); }
+  .btn-upload { flex: none; width: 46px; height: 46px; border-radius: 12px; border: 1px solid transparent; background: var(--accent); color: #fff; font-size: 20px; cursor: pointer; display: grid; place-items: center; transition: filter .12s ease, transform .12s ease; box-shadow: 0 4px 12px rgba(244,121,32,.3); }
   .btn-upload:hover { filter: brightness(1.08); transform: translateY(-1px); }
   .btn-upload:active { transform: translateY(0); }
   .dropzone { border: 1.5px dashed var(--hairline); border-radius: 14px; padding: 26px; text-align: center; color: var(--ink-2); cursor: pointer; transition: border-color .15s ease, background .15s ease; margin-bottom: 22px; background: var(--surface); }
@@ -491,7 +498,7 @@
   .kb-add button:hover { color: var(--accent); border-color: var(--accent); }
   .kb-cron { width: 100%; text-align: left; background: none; border: 1px dashed var(--hairline); color: var(--ink-2); border-radius: 9px; padding: 7px 10px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; margin-top: 2px; }
   .kb-cron:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-suave); }
-  .kb-card.tem-cron .kb-cron { border-style: solid; color: var(--accent); border-color: rgba(47,111,237,.35); }
+  .kb-card.tem-cron .kb-cron { border-style: solid; color: var(--accent); border-color: rgba(244,121,32,.35); }
   .cron-cab { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
   .cron-titulo { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
 
@@ -578,7 +585,7 @@
   .g-bar.tarefa { height: 15px; top: 15px; opacity: .9; }
 
   /* Banner de vínculo do Gantt ao projeto */
-  .gantt-proj { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; margin-bottom: 12px; background: var(--accent-suave); border: 1px solid rgba(47,111,237,.28); border-radius: 999px; padding: 5px 14px; }
+  .gantt-proj { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; margin-bottom: 12px; background: var(--accent-suave); border: 1px solid rgba(244,121,32,.28); border-radius: 999px; padding: 5px 14px; }
   .gantt-proj b { color: var(--accent); }
 
   /* Panorama do projeto */
