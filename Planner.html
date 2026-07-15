@@ -1,0 +1,918 @@
+<!-- ===================== Planner ===================== -->
+<section class="view" id="view-planner">
+  <div class="planner-wrap">
+    <div class="cal-cabecalho">
+      <div class="cal-nav" id="calNavAno">
+        <button id="anoAnterior" title="Ano anterior">‹</button>
+        <button id="anoProximo" title="Próximo ano">›</button>
+      </div>
+      <div class="cal-nav" id="calNavMes" style="display:none">
+        <button id="mesAnterior" title="Mês anterior">‹</button>
+        <button id="mesProximo" title="Próximo mês">›</button>
+      </div>
+      <h1 id="calTitulo">—</h1>
+      <div class="seg-toggle">
+        <button class="ativo" data-modo="ano">Ano</button>
+        <button data-modo="mes">Mês</button>
+      </div>
+      <div class="acoes">
+        <button class="btn" id="btnSincAgenda" title="Importar novos eventos do Google Agenda">🔄 Agenda</button>
+        <button class="btn" id="btnResumo">📊 Resumo</button>
+        <button class="btn" id="calHoje">Hoje</button>
+        <button class="btn primario" id="calNova">+ Nova atividade</button>
+      </div>
+    </div>
+
+    <div class="cal-legenda" id="calLegenda"></div>
+
+    <!-- Visão anual -->
+    <div class="mini-grade-ano" id="vistaAno"></div>
+
+    <!-- Visão mensal detalhada -->
+    <div id="vistaMes" style="display:none">
+      <div class="cal">
+        <div class="cal-semana-nomes">
+          <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+        </div>
+        <div class="cal-grade" id="calGrade"></div>
+      </div>
+    </div>
+  </div>
+  <div id="calTooltip" class="cal-tooltip"></div>
+</section>
+
+<!-- Drawer do dia -->
+<div class="drawer-fundo" id="drawerFundo"></div>
+<aside class="drawer" id="drawerDia">
+  <div class="drawer-topo">
+    <div>
+      <div class="dia-txt" id="drawerDiaTxt">—</div>
+      <div class="dia-sub" id="drawerDiaSub"></div>
+    </div>
+    <button class="fechar" id="drawerFechar" aria-label="Fechar">×</button>
+  </div>
+  <div class="drawer-corpo" id="drawerCorpo"></div>
+  <div class="drawer-rodape">
+    <button class="btn primario" id="drawerNova">+ Nova atividade neste dia</button>
+  </div>
+</aside>
+
+<!-- Modal de atividade (criar/editar) -->
+<div class="fundo-modal" id="fundoAtividade">
+  <div class="modal">
+    <h2 id="tituloAtividade">Nova atividade</h2>
+    <form id="formAtividade">
+      <input type="hidden" id="aLinha">
+      <div class="grade">
+        <div class="campo largura-total">
+          <label for="aTitulo">Título</label>
+          <input id="aTitulo" required placeholder="Reunião, operação, treinamento…">
+        </div>
+        <div class="campo">
+          <label for="aData">Data (início)</label>
+          <input type="date" id="aData" required>
+        </div>
+        <div class="campo">
+          <label for="aDataFim">Data fim (opcional)</label>
+          <input type="date" id="aDataFim">
+          <span class="dica">Preencha para atividades de vários dias.</span>
+        </div>
+        <div class="campo">
+          <label for="aInicio">Hora início</label>
+          <input type="time" id="aInicio">
+        </div>
+        <div class="campo">
+          <label for="aFim">Hora fim</label>
+          <input type="time" id="aFim">
+        </div>
+        <div class="campo">
+          <label for="aCategoria">Categoria</label>
+          <select id="aCategoria"></select>
+        </div>
+        <div class="campo">
+          <label for="aNotificacao">Notificar</label>
+          <select id="aNotificacao">
+            <option value="">Sem notificação</option>
+            <option value="No dia">No dia</option>
+            <option value="1 hora antes">1 hora antes</option>
+            <option value="3 horas antes">3 horas antes</option>
+            <option value="1 dia antes">1 dia antes</option>
+            <option value="2 dias antes">2 dias antes</option>
+            <option value="1 semana antes">1 semana antes</option>
+          </select>
+        </div>
+        <div class="campo largura-total">
+          <label for="aDescricao">Detalhes</label>
+          <textarea id="aDescricao" placeholder="Local, efetivo, observações…"></textarea>
+        </div>
+        <div class="campo campo-ref">
+          <label for="aProcessos">Processos SEI <span class="dica-inline">nº | link · 1 por linha</span></label>
+          <textarea id="aProcessos" placeholder="1400.01.0000000/2026-00 | link"></textarea>
+        </div>
+        <div class="campo campo-ref">
+          <label for="aLinks">Links de referência <span class="dica-inline">rótulo | link · 1 por linha</span></label>
+          <textarea id="aLinks" placeholder="Rótulo | https://exemplo.com"></textarea>
+        </div>
+      </div>
+      <div class="rodape">
+        <button type="button" class="btn perigo" id="btnExcluirAtiv" style="margin-right:auto;display:none">Excluir</button>
+        <button type="button" class="btn" id="btnCancelarAtiv">Cancelar</button>
+        <button type="submit" class="btn primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de detalhe do evento -->
+<div class="fundo-modal" id="fundoEvento">
+  <div class="modal">
+    <div id="eventoConteudo"></div>
+    <div class="evento-acoes">
+      <button type="button" class="btn primario" id="evtGerarDoc">📄 Gerar documento</button>
+      <button type="button" class="btn" id="evtEditar">✏️ Editar</button>
+      <button type="button" class="btn perigo" id="evtExcluir">🗑️ Excluir</button>
+      <button type="button" class="btn" id="evtFechar">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de geração de documento -->
+<div class="fundo-modal" id="fundoDoc">
+  <div class="modal largo">
+    <h2>Gerar documento</h2>
+    <div class="seg-toggle" id="docModo" style="margin-bottom:12px">
+      <button class="ativo" data-docmodo="template">📄 Rascunho pronto</button>
+      <button data-docmodo="skill">🧩 Resumo para skill</button>
+    </div>
+    <div class="grade" style="margin-bottom:12px">
+      <div class="campo">
+        <label for="docTipo">Tipo de documento</label>
+        <select id="docTipo">
+          <option value="Ordem de Serviço">Ordem de Serviço</option>
+          <option value="Ofício">Ofício</option>
+          <option value="Memorando">Memorando</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="docSkill">Modelo / Skill</label>
+        <select id="docSkill"><option value="">Template padrão</option></select>
+      </div>
+    </div>
+    <div class="campo largura-total">
+      <label id="docSaidaRot">Prévia do documento</label>
+      <div class="doc-saida" id="docSaida"></div>
+      <span class="dica" id="docDica"></span>
+    </div>
+    <div class="rodape">
+      <button type="button" class="btn" id="docFechar">Fechar</button>
+      <button type="button" class="btn" id="docBaixar">⬇️ Baixar</button>
+      <button type="button" class="btn" id="docCopiar">📋 Copiar</button>
+      <button type="button" class="btn primario" id="docRegenerar">↻ Gerar novamente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de resumo -->
+<div class="fundo-modal" id="fundoResumo">
+  <div class="modal largo">
+    <h2>Resumo de atividades</h2>
+    <div class="resumo-cabecalho">
+      <div class="seg-toggle" id="resumoPeriodo">
+        <button class="ativo" data-periodo="semana">Semana</button>
+        <button data-periodo="mes">Mês</button>
+        <button data-periodo="semestre">Semestre</button>
+        <button data-periodo="ano">Ano</button>
+      </div>
+      <span class="dica" id="resumoFaixa"></span>
+    </div>
+    <div class="resumo-tiles" id="resumoTiles"></div>
+    <div id="prazosBloco"></div>
+    <div class="resumo-lista" id="resumoLista"></div>
+    <div class="rodape">
+      <button type="button" class="btn" id="resumoFechar">Fechar</button>
+      <button type="button" class="btn primario" id="resumoCopiar">📋 Copiar resumo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ===================== Planner ===================== */
+  var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  var DIAS_SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  var CATEGORIAS_PLANNER = [
+    { nome: 'Operação', cor: '#d9662a' },
+    { nome: 'Treinamento', cor: '#0f8a5f' },
+    { nome: 'Supervisão', cor: '#6d4fd0' },
+    { nome: 'Reunião', cor: '#2f6fed' },
+    { nome: 'Prazo', cor: '#dc2626' },
+    { nome: 'Feriado', cor: '#b7791f' },
+    { nome: 'Geral', cor: '#64748b' }
+  ];
+
+  var atividades = [];
+  var plannerCarregado = false;
+  var modoPlanner = 'ano';
+  var anoRef = new Date().getFullYear();
+  var calRef = new Date();
+  var diaAberto = null;
+  var eventoAberto = null;    // linha do evento no modal de detalhe
+  var resumoPeriodoAtual = 'semana';
+  var catsOcultas = {};       // categorias escondidas pelo filtro da legenda
+  function catVisivel(c) { return !catsOcultas[c]; }
+
+  function cap(s) { return String(s).charAt(0).toUpperCase() + String(s).slice(1); }
+  function corCategoria(nome) {
+    var c = CATEGORIAS_PLANNER.filter(function (x) { return x.nome === nome; })[0];
+    return c ? c.cor : '#3987e5';
+  }
+  function isoData(ano, mes, dia) {
+    return ano + '-' + String(mes + 1).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
+  }
+  function fimDe(a) { return ehData(a.dataFim) && a.dataFim >= a.data ? a.dataFim : a.data; }
+  function noDia(a, iso) { return ehData(a.data) && iso >= a.data && iso <= fimDe(a); }
+  function atividadesDoDia(iso) {
+    return atividades.filter(function (a) { return noDia(a, iso); }).sort(function (a, b) {
+      return (a.inicio || '99:99') < (b.inicio || '99:99') ? -1 : 1;
+    });
+  }
+  function periodoTexto(a) {
+    var ini = formatarData(a.data);
+    return ehData(a.dataFim) && a.dataFim > a.data ? ini + ' a ' + formatarData(a.dataFim) : ini;
+  }
+  function horaTexto(a) {
+    if (!a.inicio) return 'Sem horário';
+    return a.inicio + (a.fim ? '–' + a.fim : '');
+  }
+  function achar(linha) { return atividades.filter(function (x) { return x.linha == linha; })[0]; }
+
+  // ----- Checklist -----
+  function parseChecklist(txt) {
+    return String(txt || '').split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
+      return { feito: /^\[x\]/i.test(l), texto: l.replace(/^\[[ xX]?\]\s*/, '') };
+    });
+  }
+  function serializeChecklist(itens) {
+    return itens.map(function (it) { return (it.feito ? '[x] ' : '[ ] ') + it.texto; }).join('\n');
+  }
+  function progressoChecklist(txt) {
+    var itens = parseChecklist(txt);
+    var feitos = itens.filter(function (i) { return i.feito; }).length;
+    return { itens: itens, total: itens.length, feitos: feitos, pct: itens.length ? Math.round(feitos / itens.length * 100) : 0 };
+  }
+
+  // ----- Render de listas de SEI / links (reusa ehUrl/ancora do módulo Gestão) -----
+  function renderRefs(bruto, comoSei) {
+    var itens = String(bruto || '').split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!itens.length) return '';
+    return '<div class="ref-lista">' + itens.map(function (l) {
+      var rot = l, url = l, barra = l.indexOf('|');
+      if (barra !== -1) { rot = l.slice(0, barra).trim(); url = l.slice(barra + 1).trim(); }
+      var temUrl = ehUrl(url);
+      if (comoSei) {
+        var num = (barra !== -1) ? rot : (temUrl ? '' : l);
+        var partes = '';
+        if (num) partes += '<span class="sei-num">' + escapar(num) + '</span>';
+        if (temUrl) partes += ancora(url, 'abrir ↗');
+        return '<div class="ref-item">' + (partes || '<span class="sei-num">' + escapar(l) + '</span>') + '</div>';
+      }
+      if (temUrl) { if (!rot || rot === url) rot = rotuloUrl(url); return '<div class="ref-item">' + ancora(url, rot) + '</div>'; }
+      return '<div class="ref-item"><span class="sei-num">' + escapar(l) + '</span></div>';
+    }).join('') + '</div>';
+  }
+
+  function carregarPlanner() {
+    chamarFn('obterAtividades', [], function (r) {
+      atividades = r.atividades || [];
+      plannerCarregado = true;
+      renderLegenda();
+      renderPlanner();
+      if (diaAberto) renderDrawer();
+    });
+  }
+  function aplicarPlanner(r) {
+    atividades = r.atividades || [];
+    renderPlanner();
+    if (diaAberto) renderDrawer();
+    if (eventoAberto && achar(eventoAberto)) renderEvento(eventoAberto); else $('fundoEvento').classList.remove('aberto');
+  }
+  function renderPlanner() { if (modoPlanner === 'ano') renderAno(); else renderCalendario(); }
+
+  function renderLegenda() {
+    $('calLegenda').innerHTML = '<span class="leg-rot">Filtrar</span>' + CATEGORIAS_PLANNER.map(function (c) {
+      return '<button type="button" class="item leg-cat' + (catsOcultas[c.nome] ? ' off' : '') + '" data-cat="' + escapar(c.nome) +
+        '" title="Mostrar/ocultar ' + escapar(c.nome) + '"><span class="ponto" style="background:' + c.cor + '"></span>' + escapar(c.nome) + '</button>';
+    }).join('');
+  }
+  $('calLegenda').addEventListener('click', function (e) {
+    var b = e.target.closest('.leg-cat'); if (!b) return;
+    var c = b.dataset.cat;
+    if (catsOcultas[c]) delete catsOcultas[c]; else catsOcultas[c] = true;
+    renderLegenda(); renderPlanner();
+  });
+
+  // ----- Alternância de modo -----
+  function mudarModo(m) {
+    modoPlanner = m;
+    $('vistaAno').style.display = m === 'ano' ? '' : 'none';
+    $('vistaMes').style.display = m === 'mes' ? '' : 'none';
+    $('calNavAno').style.display = m === 'ano' ? '' : 'none';
+    $('calNavMes').style.display = m === 'mes' ? '' : 'none';
+    document.querySelectorAll('.seg-toggle button[data-modo]').forEach(function (b) { b.classList.toggle('ativo', b.dataset.modo === m); });
+    renderPlanner();
+  }
+  document.querySelectorAll('.seg-toggle button[data-modo]').forEach(function (b) {
+    b.addEventListener('click', function () { mudarModo(b.dataset.modo); });
+  });
+
+  // ----- Visão anual -----
+  function renderAno() {
+    $('calTitulo').textContent = anoRef;
+    var hoje = hojeIso();
+    var html = '';
+    for (var m = 0; m < 12; m++) {
+      var primeiroDiaSemana = new Date(anoRef, m, 1).getDay();
+      var diasNoMes = new Date(anoRef, m + 1, 0).getDate();
+      var prefixoMes = isoData(anoRef, m, 1).slice(0, 7);
+      // Atividades que tocam o mês; multi-dia primeiro (empacotamento melhor).
+      var doMes = atividades.filter(function (a) {
+        return ehData(a.data) && catVisivel(a.categoria) && a.data.slice(0, 7) <= prefixoMes && fimDe(a).slice(0, 7) >= prefixoMes;
+      }).sort(function (a, b) {
+        if (a.data !== b.data) return a.data < b.data ? -1 : 1;
+        return (fimDe(b) > b.data ? 1 : 0) - (fimDe(a) > a.data ? 1 : 0);
+      });
+      var temHoje = hoje.slice(0, 7) === prefixoMes;
+      var numSemanas = Math.ceil((primeiroDiaSemana + diasNoMes) / 7);
+      var semanas = '';
+      for (var w = 0; w < numSemanas; w++) {
+        var nums = '', diasCol = [];
+        for (var col = 0; col < 7; col++) {
+          var dia = w * 7 + col - primeiroDiaSemana + 1;
+          if (dia < 1 || dia > diasNoMes) { diasCol.push(null); nums += '<div class="mini-dia vazia"></div>'; }
+          else {
+            var isoD = isoData(anoRef, m, dia);
+            diasCol.push(isoD);
+            nums += '<div class="mini-dia' + (isoD === hoje ? ' hoje' : '') + '" data-dia="' + isoD + '">' + dia + '</div>';
+          }
+        }
+        // Barras: cada atividade vira um segmento que atravessa suas colunas na semana.
+        var barras = '';
+        doMes.forEach(function (a) {
+          var ini = a.data, f = fimDe(a), startCol = -1, endCol = -1;
+          for (var c = 0; c < 7; c++) {
+            var iso = diasCol[c];
+            if (iso && iso >= ini && iso <= f) { if (startCol < 0) startCol = c; endCol = c; }
+          }
+          if (startCol < 0) return;
+          var cor = corCategoria(a.categoria);
+          var rL = a.data === diasCol[startCol], rR = f === diasCol[endCol];
+          var estilo = 'grid-column:' + (startCol + 1) + '/' + (endCol + 2) + ';background:' + cor +
+            ';border-top-left-radius:' + (rL ? '3px' : 0) + ';border-bottom-left-radius:' + (rL ? '3px' : 0) +
+            ';border-top-right-radius:' + (rR ? '3px' : 0) + ';border-bottom-right-radius:' + (rR ? '3px' : 0);
+          barras += '<div class="mini-barra" style="' + estilo + '" title="' + escapar(a.titulo) + '"></div>';
+        });
+        semanas += '<div class="mini-semana-linha">' + nums + '</div><div class="mini-barras">' + barras + '</div>';
+      }
+      html += '<div class="mini-mes' + (temHoje ? ' tem-hoje' : '') + '" data-mes="' + m + '">' +
+        '<h4 data-mes="' + m + '">' + cap(MESES[m]) + '<span class="cont">' + (doMes.length || '') + '</span></h4>' +
+        '<div class="mini-semana"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>' +
+        semanas + '</div>';
+    }
+    $('vistaAno').innerHTML = html;
+  }
+
+  $('vistaAno').addEventListener('click', function (e) {
+    var dia = e.target.closest('.mini-dia[data-dia]');
+    if (dia) {
+      var iso = dia.dataset.dia;
+      var p = iso.split('-');
+      calRef = new Date(Number(p[0]), Number(p[1]) - 1, 1);
+      mudarModo('mes');
+      abrirDrawer(iso);
+      return;
+    }
+    var titulo = e.target.closest('h4[data-mes]');
+    if (titulo) { calRef = new Date(anoRef, Number(titulo.dataset.mes), 1); mudarModo('mes'); }
+  });
+
+  // ----- Visão mensal -----
+  function renderCalendario() {
+    anoRef = calRef.getFullYear();
+    $('calTitulo').textContent = cap(MESES[calRef.getMonth()]) + ' de ' + calRef.getFullYear();
+    var ano = calRef.getFullYear(), mes = calRef.getMonth();
+    var inicio = new Date(ano, mes, 1 - new Date(ano, mes, 1).getDay());
+    var hoje = hojeIso();
+    var html = '';
+    for (var i = 0; i < 42; i++) {
+      var d = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + i);
+      var iso = isoData(d.getFullYear(), d.getMonth(), d.getDate());
+      var fora = d.getMonth() !== mes ? ' fora' : '';
+      var eHoje = iso === hoje ? ' hoje' : '';
+      var doDia = atividadesDoDia(iso).filter(function (a) { return catVisivel(a.categoria); });
+      var chips = doDia.slice(0, 3).map(function (a) {
+        var cor = corCategoria(a.categoria);
+        var multi = ehData(a.dataFim) && a.dataFim > a.data ? '↔ ' : '';
+        return '<div class="cal-chip' + (a.concluida ? ' feito' : '') + '" style="border-left-color:' + cor +
+          ';background:' + rgba(cor, 0.14) + ';color:' + cor + '">' +
+          multi + (a.inicio ? escapar(a.inicio) + ' ' : '') + escapar(a.titulo) + '</div>';
+      }).join('');
+      var mais = doDia.length > 3 ? '<div class="cal-mais">+' + (doDia.length - 3) + ' mais</div>' : '';
+      html += '<div class="cal-dia' + fora + eHoje + '" data-dia="' + iso + '" data-qtd="' +
+        (doDia.length ? doDia.length + ' ●' : '') + '">' +
+        '<span class="cal-num">' + d.getDate() + '</span>' + chips + mais + '</div>';
+    }
+    $('calGrade').innerHTML = html;
+  }
+
+  $('calGrade').addEventListener('click', function (e) {
+    var cel = e.target.closest('.cal-dia');
+    if (cel) abrirDrawer(cel.dataset.dia);
+  });
+
+  // ----- Navegação -----
+  $('anoAnterior').addEventListener('click', function () { anoRef--; renderAno(); });
+  $('anoProximo').addEventListener('click', function () { anoRef++; renderAno(); });
+  $('mesAnterior').addEventListener('click', function () { calRef = new Date(calRef.getFullYear(), calRef.getMonth() - 1, 1); renderCalendario(); });
+  $('mesProximo').addEventListener('click', function () { calRef = new Date(calRef.getFullYear(), calRef.getMonth() + 1, 1); renderCalendario(); });
+  $('calHoje').addEventListener('click', function () {
+    var agora = new Date();
+    anoRef = agora.getFullYear(); calRef = agora; renderPlanner();
+  });
+  $('calNova').addEventListener('click', function () { abrirFormAtividade(null, hojeIso()); });
+  $('btnSincAgenda').addEventListener('click', function () {
+    chamarFn('sincronizarAgendaAgora', [], aplicarPlanner, 'Agenda sincronizada.');
+  });
+
+  // ----- Drawer do dia -----
+  function abrirDrawer(iso) {
+    diaAberto = iso;
+    renderDrawer();
+    $('drawerDia').classList.add('aberto');
+    $('drawerFundo').classList.add('aberto');
+  }
+  function fecharDrawer() {
+    $('drawerDia').classList.remove('aberto');
+    $('drawerFundo').classList.remove('aberto');
+    diaAberto = null;
+  }
+  function renderDrawer() {
+    if (!diaAberto) return;
+    var p = diaAberto.split('-');
+    $('drawerDiaTxt').textContent = Number(p[2]) + ' de ' + cap(MESES[Number(p[1]) - 1]);
+    $('drawerDiaSub').textContent = DIAS_SEMANA[new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getDay()];
+    var lista = atividadesDoDia(diaAberto);
+    if (!lista.length) {
+      $('drawerCorpo').innerHTML = '<div class="drawer-vazio">Nenhuma atividade neste dia.<br>Adicione a primeira abaixo.</div>';
+      return;
+    }
+    $('drawerCorpo').innerHTML = lista.map(function (a) {
+      var cor = corCategoria(a.categoria);
+      var qtdSei = String(a.processos || '').split(/\r?\n/).filter(function (x) { return x.trim(); }).length;
+      var qtdLink = String(a.links || '').split(/\r?\n/).filter(function (x) { return x.trim(); }).length;
+      var selos = '';
+      if (a.notificacao) selos += ' <span class="badge-info">🔔 ' + escapar(a.notificacao) + '</span>';
+      if (qtdSei) selos += ' <span class="badge-info">📎 ' + qtdSei + ' SEI</span>';
+      if (qtdLink) selos += ' <span class="badge-info">🔗 ' + qtdLink + '</span>';
+      var pg = progressoChecklist(a.checklist);
+      var progHtml = pg.total ? '<div class="mini-prog">✓ <div class="barra"><i style="width:' + pg.pct + '%"></i></div> ' + pg.feitos + '/' + pg.total + '</div>' : '';
+      return '<div class="ativ-card' + (a.concluida ? ' feita' : '') + '" style="border-left-color:' + cor + '">' +
+        '<div class="linha1">' +
+          '<span class="titulo clicavel" data-abrir="' + a.linha + '">' + escapar(a.titulo) + '</span>' +
+          '<span class="cat-tag" style="background:' + rgba(cor, 0.16) + ';color:' + cor + '">' + escapar(a.categoria) + '</span>' +
+        '</div>' +
+        '<div class="hora">🕐 ' + escapar(horaTexto(a)) + (ehData(a.dataFim) && a.dataFim > a.data ? ' · ' + escapar(periodoTexto(a)) : '') + '</div>' +
+        (a.descricao ? '<div class="desc">' + escapar(a.descricao) + '</div>' : '') +
+        (selos ? '<div>' + selos + '</div>' : '') +
+        progHtml +
+        '<div class="acoes">' +
+          '<button title="' + (a.concluida ? 'Reabrir' : 'Concluir') + '" data-feito="' + a.linha + '">' + (a.concluida ? '↩️' : '✅') + '</button>' +
+          '<button title="Abrir cartão" data-abrir="' + a.linha + '">🔍</button>' +
+          '<button title="Editar" data-edit-ativ="' + a.linha + '">✏️</button>' +
+          '<button title="Excluir" data-del-ativ="' + a.linha + '">🗑️</button>' +
+        '</div></div>';
+    }).join('');
+  }
+  $('drawerFechar').addEventListener('click', fecharDrawer);
+  $('drawerFundo').addEventListener('click', fecharDrawer);
+  $('drawerNova').addEventListener('click', function () { abrirFormAtividade(null, diaAberto || hojeIso()); });
+
+  $('drawerCorpo').addEventListener('click', function (e) {
+    var bAbrir = e.target.closest('[data-abrir]');
+    if (bAbrir) { abrirEvento(bAbrir.dataset.abrir); return; }
+    var bE = e.target.closest('[data-edit-ativ]');
+    if (bE) { var a = achar(bE.dataset.editAtiv); if (a) abrirFormAtividade(a); return; }
+    var bF = e.target.closest('[data-feito]');
+    if (bF) {
+      var at = achar(bF.dataset.feito);
+      chamarFn('alternarConcluidaAtividade', [Number(bF.dataset.feito), at ? !at.concluida : true], aplicarPlanner);
+      return;
+    }
+    var bD = e.target.closest('[data-del-ativ]');
+    if (bD && confirm('Excluir esta atividade?')) chamarFn('excluirAtividade', [Number(bD.dataset.delAtiv)], aplicarPlanner, 'Atividade excluída.');
+  });
+
+  // ----- Cartão de detalhe do evento -----
+  function abrirEvento(linha) { eventoAberto = Number(linha); renderEvento(eventoAberto); $('fundoEvento').classList.add('aberto'); }
+  function fecharEvento() { $('fundoEvento').classList.remove('aberto'); eventoAberto = null; }
+  function renderEvento(linha) {
+    var a = achar(linha);
+    if (!a) { fecharEvento(); return; }
+    var cor = corCategoria(a.categoria);
+    var html = '<div class="evento-cab">' +
+      '<span class="barra" style="background:' + cor + '"></span>' +
+      '<div><h2>' + escapar(a.titulo) + '</h2>' +
+      '<div class="meta"><span class="cat-tag" style="background:' + rgba(cor, 0.16) + ';color:' + cor + '">' + escapar(a.categoria) + '</span> · ' +
+      escapar(periodoTexto(a)) + ' · 🕐 ' + escapar(horaTexto(a)) + '</div></div></div>';
+    if (a.descricao) html += '<div class="evento-secao"><div class="rot">📝 Detalhes</div><div class="txt">' + escapar(a.descricao) + '</div></div>';
+    var sei = renderRefs(a.processos, true);
+    if (sei) html += '<div class="evento-secao"><div class="rot">📎 Processos SEI</div>' + sei + '</div>';
+    var links = renderRefs(a.links, false);
+    if (links) html += '<div class="evento-secao"><div class="rot">🔗 Links de referência</div>' + links + '</div>';
+    html += '<div class="evento-secao"><div class="rot">🔔 Notificação</div><div class="txt">' +
+      (a.notificacao ? escapar(a.notificacao) + ' — lembrete por e-mail' : 'Nenhuma programada.') + '</div></div>';
+
+    // Checklist com progresso
+    var pg = progressoChecklist(a.checklist);
+    html += '<div class="evento-secao"><div class="rot">✓ Checklist</div>';
+    if (pg.total) {
+      html += '<div class="progresso-rot"><span>' + pg.feitos + '/' + pg.total + ' concluídos</span><span>' + pg.pct + '%</span></div>' +
+        '<div class="progresso"><i style="width:' + pg.pct + '%"></i></div>';
+    }
+    html += '<div class="checklist">' + (pg.total ? pg.itens.map(function (it, idx) {
+      return '<div class="chk-item' + (it.feito ? ' feito' : '') + '">' +
+        '<input type="checkbox" data-chk="' + idx + '"' + (it.feito ? ' checked' : '') + '>' +
+        '<label>' + escapar(it.texto) + '</label>' +
+        '<button class="del" title="Remover" data-chk-del="' + idx + '">✕</button></div>';
+    }).join('') : '<div class="chk-vazio">Nenhum item ainda. Adicione o que precisa ser feito neste prazo.</div>') + '</div>';
+    html += '<div class="chk-add"><input id="chkNovo" placeholder="Adicionar item…"><button type="button" class="btn" id="chkAdd">Adicionar</button></div>';
+    html += '</div>';
+
+    $('eventoConteudo').innerHTML = html;
+  }
+
+  // Interações do checklist (delegadas, pois o conteúdo é re-renderizado)
+  function checklistDoEvento() { var a = achar(eventoAberto); return a ? parseChecklist(a.checklist) : []; }
+  function salvarChecklist(itens) { chamarFn('atualizarChecklist', [Number(eventoAberto), serializeChecklist(itens)], aplicarPlanner); }
+  function adicionarItemChecklist() {
+    var inp = $('chkNovo'); if (!inp) return;
+    var txt = inp.value.trim(); if (!txt) return;
+    var itens = checklistDoEvento(); itens.push({ feito: false, texto: txt }); salvarChecklist(itens);
+  }
+  $('eventoConteudo').addEventListener('change', function (e) {
+    var chk = e.target.closest('input[type=checkbox][data-chk]');
+    if (chk) { var itens = checklistDoEvento(); var i = Number(chk.dataset.chk); if (itens[i]) { itens[i].feito = chk.checked; salvarChecklist(itens); } }
+  });
+  $('eventoConteudo').addEventListener('click', function (e) {
+    var del = e.target.closest('[data-chk-del]');
+    if (del) { var itens = checklistDoEvento(); itens.splice(Number(del.dataset.chkDel), 1); salvarChecklist(itens); return; }
+    if (e.target.id === 'chkAdd') adicionarItemChecklist();
+  });
+  $('eventoConteudo').addEventListener('keydown', function (e) {
+    if (e.target.id === 'chkNovo' && e.key === 'Enter') { e.preventDefault(); adicionarItemChecklist(); }
+  });
+  $('evtFechar').addEventListener('click', fecharEvento);
+  $('fundoEvento').addEventListener('click', function (e) { if (e.target === this) fecharEvento(); });
+  $('evtEditar').addEventListener('click', function () { var a = achar(eventoAberto); if (a) { fecharEvento(); abrirFormAtividade(a); } });
+  $('evtExcluir').addEventListener('click', function () {
+    if (eventoAberto && confirm('Excluir esta atividade?')) {
+      var linha = eventoAberto; fecharEvento();
+      chamarFn('excluirAtividade', [Number(linha)], aplicarPlanner, 'Atividade excluída.');
+    }
+  });
+  $('evtGerarDoc').addEventListener('click', function () { var a = achar(eventoAberto); if (a) abrirDoc(a); });
+
+  // ----- Gerador de documento: rascunho por template OU briefing para a skill -----
+  var eventoDoc = null;
+  var docModo = 'template';
+
+  function abrirDoc(a) {
+    eventoDoc = a;
+    docModo = 'template';
+    document.querySelectorAll('#docModo button').forEach(function (b) { b.classList.toggle('ativo', b.dataset.docmodo === 'template'); });
+    var sel = $('docSkill');
+    var skillsDisp = (typeof skills !== 'undefined' && skills) ? skills : [];
+    sel.innerHTML = '<option value="">Template padrão</option>' +
+      skillsDisp.map(function (s) { return '<option value="' + escapar(s.nome) + '">Skill: ' + escapar(s.nome) + '</option>'; }).join('');
+    // pré-seleciona uma skill de OS/ofício, se houver
+    var os = skillsDisp.filter(function (s) { return /ordem|servi|of[ií]cio|\bos\b/i.test(s.nome); })[0];
+    if (os) sel.value = os.nome;
+    $('docTipo').value = /of[ií]cio/i.test(os ? os.nome : '') ? 'Ofício' : 'Ordem de Serviço';
+    gerarDoc();
+    $('fundoDoc').classList.add('aberto');
+  }
+
+  function docCampos(a) {
+    return {
+      tipo: $('docTipo').value,
+      skill: $('docSkill').value,
+      hoje: formatarData(hojeIso()),
+      sei: String(a.processos || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean),
+      refs: String(a.links || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean)
+    };
+  }
+
+  function gerarTemplateTexto(a) {
+    var c = docCampos(a);
+    return c.tipo.toUpperCase() + ' Nº ______/' + (a.data ? a.data.slice(0, 4) : new Date().getFullYear()) + '\n\n' +
+      'ASSUNTO: ' + (a.titulo || '') + '\n\n' +
+      '1. FINALIDADE\n   ' + (a.descricao || a.titulo || '') + '\n\n' +
+      '2. DATA / PERÍODO\n   ' + periodoTexto(a) + (a.inicio ? '  ·  ' + horaTexto(a) : '') + '\n\n' +
+      '3. PROCESSOS SEI RELACIONADOS\n   ' + (c.sei.join('\n   ') || '(sem processos vinculados)') + '\n\n' +
+      '4. REFERÊNCIAS\n   ' + (c.refs.join('\n   ') || '(sem referências)') + '\n\n' +
+      'Belo Horizonte, ' + c.hoje + '.\n\n' +
+      '_______________________________________\n[Autoridade responsável]';
+  }
+
+  function gerarBriefingTexto(a) {
+    var c = docCampos(a);
+    var alvo = c.skill ? 'a skill "' + c.skill + '"' : ('o padrão de ' + c.tipo);
+    return [
+      'Gere um documento do tipo "' + c.tipo + '" usando ' + alvo + ', com base nas informações abaixo.',
+      '',
+      'DADOS DO EVENTO (Planner CEB):',
+      '- Assunto: ' + (a.titulo || ''),
+      '- Categoria: ' + (a.categoria || ''),
+      '- Data/Período: ' + periodoTexto(a) + (a.inicio ? ' — ' + horaTexto(a) : ''),
+      '- Finalidade/Detalhes: ' + (a.descricao || a.titulo || '(não informado)'),
+      '- Local: Belo Horizonte',
+      '- Data de emissão: ' + c.hoje,
+      '- Processos SEI relacionados:' + (c.sei.length ? '\n    ' + c.sei.join('\n    ') : ' (nenhum)'),
+      '- Links de referência:' + (c.refs.length ? '\n    ' + c.refs.join('\n    ') : ' (nenhum)'),
+      '',
+      'INSTRUÇÕES: produza o documento completo no padrão da skill, preenchendo numeração, cabeçalho e autoridade responsável quando aplicável. Mantenha a linguagem formal.'
+    ].join('\n');
+  }
+
+  function gerarDoc() {
+    var a = eventoDoc; if (!a) return;
+    $('docSaida').textContent = docModo === 'skill' ? gerarBriefingTexto(a) : gerarTemplateTexto(a);
+    if (docModo === 'skill') {
+      $('docSaidaRot').textContent = 'Resumo para colar no Claude com a skill';
+      $('docDica').textContent = 'Copie ou baixe este resumo e cole aqui no Claude junto com a skill' +
+        ($('docSkill').value ? ' "' + $('docSkill').value + '"' : ' de documentos') + ' para gerar o documento no padrão.';
+    } else {
+      $('docSaidaRot').textContent = 'Prévia do documento';
+      $('docDica').textContent = 'Rascunho preenchido com os dados do evento' +
+        ($('docSkill').value ? ' (modelo: ' + $('docSkill').value + ')' : '') + '. Ajuste o texto conforme necessário e use "Copiar".';
+    }
+  }
+
+  document.querySelectorAll('#docModo button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      docModo = b.dataset.docmodo;
+      document.querySelectorAll('#docModo button').forEach(function (x) { x.classList.toggle('ativo', x === b); });
+      gerarDoc();
+    });
+  });
+  $('docTipo').addEventListener('change', gerarDoc);
+  $('docSkill').addEventListener('change', gerarDoc);
+  $('docRegenerar').addEventListener('click', gerarDoc);
+  $('docFechar').addEventListener('click', function () { $('fundoDoc').classList.remove('aberto'); });
+  $('fundoDoc').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
+  $('docCopiar').addEventListener('click', function () {
+    var txt = $('docSaida').textContent;
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast(docModo === 'skill' ? 'Resumo copiado.' : 'Documento copiado.'); }, function () { toast('Não foi possível copiar.', true); });
+    else toast('Cópia não suportada neste navegador.', true);
+  });
+  $('docBaixar').addEventListener('click', function () {
+    var a = eventoDoc; if (!a) return;
+    var slug = String(a.titulo || 'documento').replace(/[^\w\-. ]+/g, '_').trim().slice(0, 50);
+    var nome = $('docTipo').value.replace(/[^\w]+/g, '_') + '_' + slug + (docModo === 'skill' ? '_briefing' : '') + '.md';
+    var blob = new Blob([$('docSaida').textContent], { type: 'text/markdown;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var el = document.createElement('a'); el.href = url; el.download = nome;
+    document.body.appendChild(el); el.click(); document.body.removeChild(el);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    toast('Baixando "' + nome + '".');
+  });
+
+  // ----- Formulário de atividade -----
+  function abrirFormAtividade(a, dataPadrao) {
+    $('aCategoria').innerHTML = CATEGORIAS_PLANNER.map(function (c) { return '<option value="' + escapar(c.nome) + '">' + escapar(c.nome) + '</option>'; }).join('');
+    $('tituloAtividade').textContent = a ? 'Editar atividade' : 'Nova atividade';
+    $('aLinha').value = a ? a.linha : '';
+    $('aTitulo').value = a ? a.titulo : '';
+    $('aData').value = a ? (ehData(a.data) ? a.data : dataPadrao) : (dataPadrao || hojeIso());
+    $('aDataFim').value = a && ehData(a.dataFim) ? a.dataFim : '';
+    $('aCategoria').value = a ? a.categoria : 'Geral';
+    $('aNotificacao').value = a ? (a.notificacao || '') : '';
+    $('aInicio').value = a && a.inicio ? a.inicio : '';
+    $('aFim').value = a && a.fim ? a.fim : '';
+    $('aDescricao').value = a ? a.descricao : '';
+    $('aProcessos').value = a ? (a.processos || '') : '';
+    $('aLinks').value = a ? (a.links || '') : '';
+    $('btnExcluirAtiv').style.display = a ? '' : 'none';
+    $('btnExcluirAtiv').dataset.linha = a ? a.linha : '';
+    $('fundoAtividade').classList.add('aberto');
+    $('aTitulo').focus();
+  }
+  function fecharFormAtividade() { $('fundoAtividade').classList.remove('aberto'); }
+
+  $('btnCancelarAtiv').addEventListener('click', fecharFormAtividade);
+  $('fundoAtividade').addEventListener('click', function (e) { if (e.target === this) fecharFormAtividade(); });
+  $('btnExcluirAtiv').addEventListener('click', function () {
+    var linha = this.dataset.linha;
+    if (linha && confirm('Excluir esta atividade?')) { fecharFormAtividade(); chamarFn('excluirAtividade', [Number(linha)], aplicarPlanner, 'Atividade excluída.'); }
+  });
+  $('formAtividade').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var a = {
+      linha: $('aLinha').value || null,
+      titulo: $('aTitulo').value.trim(),
+      data: $('aData').value,
+      dataFim: $('aDataFim').value || '',
+      categoria: $('aCategoria').value,
+      notificacao: $('aNotificacao').value,
+      inicio: $('aInicio').value || '',
+      fim: $('aFim').value || '',
+      descricao: $('aDescricao').value.trim(),
+      processos: $('aProcessos').value.trim(),
+      links: $('aLinks').value.trim()
+    };
+    if (!a.titulo || !a.data) { toast('Informe título e data.', true); return; }
+    if (a.dataFim && a.dataFim < a.data) { toast('A data fim é anterior à data de início.', true); return; }
+    fecharFormAtividade();
+    chamarFn('salvarAtividade', [a], function (r) {
+      atividades = r.atividades || [];
+      var p = a.data.split('-');
+      anoRef = Number(p[0]);
+      calRef = new Date(Number(p[0]), Number(p[1]) - 1, 1);
+      renderPlanner();
+      if (diaAberto) renderDrawer();
+    }, a.linha ? 'Atividade atualizada.' : 'Atividade criada.');
+  });
+
+  // ----- Resumo -----
+  function faixaPeriodo(periodo) {
+    var h = new Date();
+    var ini, fim;
+    if (periodo === 'semana') {
+      ini = new Date(h.getFullYear(), h.getMonth(), h.getDate() - h.getDay());
+      fim = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + 6);
+    } else if (periodo === 'mes') {
+      ini = new Date(h.getFullYear(), h.getMonth(), 1);
+      fim = new Date(h.getFullYear(), h.getMonth() + 1, 0);
+    } else if (periodo === 'semestre') {
+      var s = h.getMonth() < 6 ? 0 : 6;
+      ini = new Date(h.getFullYear(), s, 1);
+      fim = new Date(h.getFullYear(), s + 6, 0);
+    } else {
+      ini = new Date(h.getFullYear(), 0, 1);
+      fim = new Date(h.getFullYear(), 11, 31);
+    }
+    return [isoData(ini.getFullYear(), ini.getMonth(), ini.getDate()), isoData(fim.getFullYear(), fim.getMonth(), fim.getDate())];
+  }
+  function atividadesNoPeriodo(iIni, iFim) {
+    return atividades.filter(function (a) { return ehData(a.data) && a.data <= iFim && fimDe(a) >= iIni; })
+      .sort(function (a, b) { return a.data < b.data ? -1 : a.data > b.data ? 1 : (a.inicio || '') < (b.inicio || '') ? -1 : 1; });
+  }
+  function renderResumo(periodo) {
+    resumoPeriodoAtual = periodo;
+    document.querySelectorAll('#resumoPeriodo button').forEach(function (b) { b.classList.toggle('ativo', b.dataset.periodo === periodo); });
+    var faixa = faixaPeriodo(periodo);
+    $('resumoFaixa').textContent = formatarData(faixa[0]) + ' — ' + formatarData(faixa[1]);
+    var lista = atividadesNoPeriodo(faixa[0], faixa[1]);
+
+    var porCat = {}, concluidas = 0;
+    lista.forEach(function (a) { porCat[a.categoria] = (porCat[a.categoria] || 0) + 1; if (a.concluida) concluidas++; });
+    var tiles = '<div class="resumo-tile"><div class="rot">Total</div><div class="val">' + lista.length + '</div></div>' +
+      '<div class="resumo-tile"><div class="rot">✅ Concluídas</div><div class="val">' + concluidas + '</div></div>';
+    CATEGORIAS_PLANNER.forEach(function (c) {
+      if (!porCat[c.nome]) return;
+      tiles += '<div class="resumo-tile"><div class="rot"><span class="ponto" style="background:' + c.cor + '"></span>' + escapar(c.nome) + '</div><div class="val">' + porCat[c.nome] + '</div></div>';
+    });
+    $('resumoTiles').innerHTML = tiles;
+    renderPrazos(lista);
+
+    if (!lista.length) { $('resumoLista').innerHTML = '<div class="resumo-vazio">Nenhuma atividade neste período.</div>'; return; }
+    $('resumoLista').innerHTML = lista.map(function (a) {
+      var cor = corCategoria(a.categoria);
+      return '<div class="resumo-dia" style="border-left-color:' + cor + '">' +
+        '<div class="rd-data">' + escapar(periodoTexto(a)) + (a.inicio ? ' · ' + escapar(a.inicio) : '') + '</div>' +
+        '<div class="rd-item">' + (a.concluida ? '✅ ' : '') + escapar(a.titulo) + ' — <span style="color:' + cor + '">' + escapar(a.categoria) + '</span></div>' +
+        '</div>';
+    }).join('');
+  }
+  // Indicador de prazos (cores de status: vencido / próximo / ok — sempre com ícone + rótulo)
+  function statusPrazo(iso) {
+    var d = diasAte(iso);
+    if (d === null) return null;
+    if (d < 0) return { cor: '#dc2626', chave: 'vencido', icone: '⚠', txt: d === -1 ? 'venceu ontem' : 'venceu há ' + (-d) + ' d' };
+    if (d <= 3) return { cor: '#d9662a', chave: 'urg', icone: '🔴', txt: d === 0 ? 'vence hoje' : (d === 1 ? 'vence amanhã' : 'em ' + d + ' d') };
+    if (d <= 7) return { cor: '#b7791f', chave: 'prox', icone: '🟠', txt: 'em ' + d + ' d' };
+    return { cor: '#12a150', chave: 'ok', icone: '🟢', txt: 'em ' + d + ' d' };
+  }
+  function renderPrazos(lista) {
+    var prazos = lista.filter(function (a) { return a.categoria === 'Prazo' && !a.concluida && ehData(a.data); })
+      .sort(function (a, b) { return a.data < b.data ? -1 : 1; });
+    if (!prazos.length) { $('prazosBloco').innerHTML = ''; return; }
+    var cont = { vencido: 0, urg: 0, prox: 0, ok: 0 };
+    prazos.forEach(function (a) { var s = statusPrazo(a.data); if (s) cont[s.chave]++; });
+    var total = prazos.length;
+    var seg = [['vencido', '#dc2626', 'Vencidos'], ['urg', '#d9662a', '≤ 3 dias'], ['prox', '#b7791f', '≤ 7 dias'], ['ok', '#12a150', '> 7 dias']];
+    var barra = seg.map(function (s) { var c = cont[s[0]]; return c ? '<span style="background:' + s[1] + ';width:' + (c / total * 100) + '%"></span>' : ''; }).join('');
+    var legenda = seg.filter(function (s) { return cont[s[0]]; }).map(function (s) {
+      return '<div class="item"><span class="ponto" style="background:' + s[1] + '"></span>' + s[2] + ': ' + cont[s[0]] + '</div>';
+    }).join('');
+    var linhas = prazos.map(function (a) {
+      var s = statusPrazo(a.data);
+      return '<div class="prazo-linha"><span class="quando">' + escapar(formatarData(a.data)) + '</span>' +
+        '<span class="rotulo">' + escapar(a.titulo) + '</span>' +
+        '<span class="prazo-pill" style="background:' + rgba(s.cor, 0.18) + ';color:' + s.cor + '">' + s.icone + ' ' + escapar(s.txt) + '</span></div>';
+    }).join('');
+    $('prazosBloco').innerHTML = '<div class="prazos-bloco"><h3>⏳ Prazos no período (' + total + ')</h3>' +
+      '<div class="prazos-barra">' + barra + '</div>' +
+      '<div class="prazo-legenda">' + legenda + '</div>' +
+      '<div class="prazo-lista">' + linhas + '</div></div>';
+  }
+
+  function resumoTexto() {
+    var faixa = faixaPeriodo(resumoPeriodoAtual);
+    var lista = atividadesNoPeriodo(faixa[0], faixa[1]);
+    var linhas = ['RESUMO (' + resumoPeriodoAtual + '): ' + formatarData(faixa[0]) + ' a ' + formatarData(faixa[1]),
+      'Total de atividades: ' + lista.length, ''];
+    lista.forEach(function (a) {
+      linhas.push('• ' + periodoTexto(a) + (a.inicio ? ' ' + a.inicio : '') + ' — ' + a.titulo + ' [' + a.categoria + ']' + (a.concluida ? ' (concluída)' : ''));
+    });
+    return linhas.join('\n');
+  }
+  $('btnResumo').addEventListener('click', function () { renderResumo(resumoPeriodoAtual); $('fundoResumo').classList.add('aberto'); });
+  document.querySelectorAll('#resumoPeriodo button').forEach(function (b) {
+    b.addEventListener('click', function () { renderResumo(b.dataset.periodo); });
+  });
+  $('resumoFechar').addEventListener('click', function () { $('fundoResumo').classList.remove('aberto'); });
+  $('fundoResumo').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
+  $('resumoCopiar').addEventListener('click', function () {
+    var txt = resumoTexto();
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast('Resumo copiado.'); }, function () { toast('Não foi possível copiar.', true); });
+    else toast('Cópia não suportada neste navegador.', true);
+  });
+
+  /* ----- Tooltip: resumo do dia ao passar o cursor ----- */
+  function conteudoTooltip(iso) {
+    var lista = atividadesDoDia(iso).filter(function (a) { return catVisivel(a.categoria); });
+    if (!lista.length) return '';
+    var p = iso.split('-');
+    var html = '<div class="tt-data">' + Number(p[2]) + ' de ' + cap(MESES[Number(p[1]) - 1]) + '</div>';
+    html += lista.map(function (a) {
+      var cor = corCategoria(a.categoria);
+      var flags = '';
+      if (a.categoria === 'Prazo' && !a.concluida) {
+        var s = statusPrazo(iso);
+        if (s) flags += '<span class="tt-flag" style="background:' + rgba(s.cor, 0.18) + ';color:' + s.cor + '">' + s.icone + ' ' + escapar(s.txt) + '</span>';
+      }
+      var pg = progressoChecklist(a.checklist);
+      if (pg.total && pg.feitos < pg.total) flags += '<span class="tt-flag" style="background:var(--surface-3);color:var(--ink-2)">▢ ' + (pg.total - pg.feitos) + ' pendente' + (pg.total - pg.feitos > 1 ? 's' : '') + '</span>';
+      if (a.concluida) flags += '<span class="tt-flag" style="background:rgba(12,163,12,.16);color:var(--good)">✅ concluída</span>';
+      return '<div class="tt-item"><span class="pt" style="background:' + cor + '"></span>' +
+        '<span>' + escapar(a.titulo) + (a.inicio ? ' · ' + escapar(a.inicio) : '') + '</span></div>' +
+        (flags ? '<div class="tt-flags">' + flags + '</div>' : '');
+    }).join('');
+    return html;
+  }
+  function posicionarTooltip(x, y) {
+    var tt = $('calTooltip'), w = tt.offsetWidth, h = tt.offsetHeight;
+    var left = x + 16, top = y + 16;
+    if (left + w > window.innerWidth - 10) left = x - w - 16;
+    if (top + h > window.innerHeight - 10) top = y - h - 16;
+    tt.style.left = Math.max(8, left) + 'px';
+    tt.style.top = Math.max(8, top) + 'px';
+  }
+  var vPlanner = document.getElementById('view-planner');
+  vPlanner.addEventListener('mouseover', function (e) {
+    var cel = e.target.closest('.mini-dia[data-dia], .cal-dia[data-dia]');
+    var tt = $('calTooltip');
+    if (!cel) return;
+    var html = conteudoTooltip(cel.dataset.dia);
+    if (!html) { tt.classList.remove('mostrar'); return; }
+    tt.innerHTML = html;
+    tt.classList.add('mostrar');
+    posicionarTooltip(e.clientX, e.clientY);
+  });
+  vPlanner.addEventListener('mousemove', function (e) {
+    var tt = $('calTooltip');
+    if (!tt.classList.contains('mostrar')) return;
+    var cel = e.target.closest('.mini-dia[data-dia], .cal-dia[data-dia]');
+    if (!cel) { tt.classList.remove('mostrar'); return; }
+    posicionarTooltip(e.clientX, e.clientY);
+  });
+  vPlanner.addEventListener('mouseleave', function () { $('calTooltip').classList.remove('mostrar'); });
+
+  /* ----- Integração: inserir um processo do Controle de Processos no Planner ----- */
+  function inserirProcessoNoPlanner(p) {
+    trocarView('planner');
+    var abrir = function () {
+      abrirFormAtividade(null, ehData(p.prazo) ? p.prazo : hojeIso());
+      $('aTitulo').value = p.descricao || (p.processo && p.processo !== '-' ? p.processo : 'Processo');
+      $('aCategoria').value = 'Prazo';
+      var sei = (p.processo && p.processo !== '-' ? p.processo : '');
+      if (p.link) sei += (sei ? ' | ' : '') + p.link;
+      $('aProcessos').value = sei;
+      if (p.obs) $('aDescricao').value = p.obs;
+    };
+    if (!plannerCarregado) {
+      chamarFn('obterAtividades', [], function (r) { atividades = r.atividades || []; plannerCarregado = true; renderLegenda(); renderPlanner(); abrir(); });
+    } else { abrir(); }
+  }
+</script>

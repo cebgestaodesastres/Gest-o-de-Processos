@@ -2,23 +2,33 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <base target="_top">
 <style>
   :root {
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --surface-2: #232322;
-    --surface-3: #2c2c2a;
-    --ink: #ffffff;
-    --ink-2: #c3c2b7;
-    --muted: #898781;
-    --hairline: rgba(255, 255, 255, 0.10);
-    --accent: #3987e5;
-    --good: #0ca30c;
-    --warning: #fab219;
-    --critical: #d03b3b;
-    --violet: #9085e9;
-    --aqua: #199e70;
+    /* ===== Identidade institucional ===== */
+    --marca-cinza-1: #434A4F;   /* cinza escuro institucional */
+    --marca-cinza-2: #606A70;   /* cinza médio institucional */
+    --marca-off-white: #F1E9E2; /* off-white institucional */
+    --marca-laranja-1: #F47920; /* laranja principal */
+    --marca-laranja-2: #F7941E; /* laranja secundário */
+
+    --page: var(--marca-off-white); /* fundo off-white institucional */
+    --surface: #ffffff;             /* cartões brancos */
+    --surface-2: #f7f1ea;           /* realce suave */
+    --surface-3: #e9ded1;           /* hover / trilhos */
+    --ink: var(--marca-cinza-1);    /* texto principal (cinza institucional) */
+    --ink-2: var(--marca-cinza-2);  /* texto secundário */
+    --muted: #949ba1;               /* apoio */
+    --hairline: rgba(67, 74, 79, 0.16);
+    --accent: var(--marca-laranja-1);   /* laranja institucional (acento) */
+    --accent-suave: rgba(244, 121, 32, 0.12);
+    --good: #12a150;
+    --warning: #b7791f;
+    --critical: #dc2626;
+    --violet: #6d4fd0;
+    --aqua: #0d9488;
+    --laranja: var(--marca-laranja-2);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
@@ -29,46 +39,20 @@
     font-size: 14px;
     line-height: 1.45;
   }
-  .wrap { max-width: 1480px; margin: 0 auto; padding: 24px 20px 48px; }
 
-  /* ---------- Topo ---------- */
-  .topo { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
-  .topo h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
-  .topo .sub { color: var(--muted); font-size: 13px; }
-  .topo .acoes { margin-left: auto; display: flex; gap: 10px; align-items: center; }
-  a.link-planilha { color: var(--ink-2); font-size: 13px; text-decoration: none; border-bottom: 1px dotted var(--muted); }
-  a.link-planilha:hover { color: var(--ink); }
-
+  /* ---------- Botões (compartilhado) ---------- */
   .btn {
     border: 1px solid var(--hairline); background: var(--surface-2); color: var(--ink);
     padding: 8px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
-    cursor: pointer; transition: background .12s ease;
+    cursor: pointer; transition: background .12s ease; font-family: inherit;
   }
   .btn:hover { background: var(--surface-3); }
   .btn.primario { background: var(--accent); border-color: transparent; }
   .btn.primario:hover { filter: brightness(1.1); }
-  .btn.perigo { color: #f0a0a0; }
-  .btn.perigo:hover { background: rgba(208, 59, 59, 0.18); }
+  .btn.perigo { color: var(--critical); }
+  .btn.perigo:hover { background: rgba(220, 38, 38, 0.10); }
 
-  /* ---------- Cards de resumo ---------- */
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
-  .tile {
-    background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
-    padding: 14px 16px; cursor: default;
-  }
-  .tile.clicavel { cursor: pointer; transition: border-color .12s ease, background .12s ease; }
-  .tile.clicavel:hover { background: var(--surface-2); }
-  .tile.ativo { border-color: var(--accent); }
-  .tile .rotulo { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: 6px; }
-  .tile .valor { font-size: 28px; font-weight: 700; margin-top: 4px; }
-  .ponto { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
-
-  /* ---------- Filtros ---------- */
-  .filtros {
-    display: flex; gap: 10px; flex-wrap: wrap; align-items: end;
-    background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
-    padding: 14px 16px; margin-bottom: 16px;
-  }
+  /* ---------- Campos de formulário (compartilhado) ---------- */
   .campo { display: flex; flex-direction: column; gap: 5px; }
   .campo.crescer { flex: 1 1 220px; }
   .campo label { color: var(--muted); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
@@ -78,9 +62,124 @@
   }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
   input::placeholder { color: var(--muted); }
-  input[type="date"] { color-scheme: dark; }
+  input[type="date"], input[type="time"] { color-scheme: light; }
+  .dica { color: var(--muted); font-size: 11.5px; }
 
-  /* ---------- Tabela ---------- */
+  /* ---------- Modal (compartilhado) ---------- */
+  .fundo-modal {
+    position: fixed; inset: 0; background: rgba(70, 52, 30, 0.34); display: none;
+    align-items: flex-start; justify-content: center; padding: 5vh 16px; z-index: 80;
+  }
+  .fundo-modal.aberto { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
+    width: 100%; max-width: 620px; padding: 22px; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 18px 48px rgba(70,52,30,.20);
+  }
+  .modal h2 { font-size: 16px; margin-bottom: 16px; }
+  .modal .grade { display: grid; grid-template-columns: 1fr 1fr; gap: 11px 12px; }
+  .modal .grade .largura-total { grid-column: 1 / -1; }
+  .modal textarea { resize: vertical; min-height: 54px; }
+  .campo-ref textarea { min-height: 44px; }
+  .dica-inline { color: var(--muted); font-weight: 500; font-size: 10.5px; text-transform: none; letter-spacing: 0; margin-left: 6px; }
+  .campo label { display: flex; align-items: baseline; }
+  .modal .rodape { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  .modal.confirmar { max-width: 420px; }
+  .modal.confirmar p { color: var(--ink-2); margin-bottom: 4px; }
+  .modal.largo { max-width: 720px; }
+
+  /* ---------- Toast / carregando (compartilhado) ---------- */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--marca-cinza-1); border: 1px solid rgba(255,255,255,.14); color: #ffffff;
+    padding: 10px 18px; border-radius: 10px; font-size: 13.5px; opacity: 0;
+    box-shadow: 0 8px 24px rgba(70,52,30,.22);
+    transition: all .25s ease; z-index: 100; pointer-events: none;
+  }
+  #toast.mostrar { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.erro { border-color: var(--critical); }
+  #carregando {
+    position: fixed; inset: 0; background: rgba(232, 221, 206, 0.72); z-index: 90;
+    display: none; align-items: center; justify-content: center; color: var(--ink-2); gap: 10px;
+  }
+  #carregando.ativo { display: flex; }
+  .girar { width: 18px; height: 18px; border: 2px solid var(--hairline); border-top-color: var(--accent); border-radius: 50%; animation: girar .8s linear infinite; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+
+  /* ================= Layout com barra lateral ================= */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 232px; flex: none; background: var(--marca-cinza-1); border-right: 1px solid rgba(0,0,0,.18);
+    display: flex; flex-direction: column; gap: 6px; padding: 20px 14px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 60;
+  }
+  .sidebar .marca { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; }
+  .sidebar .marca .logo {
+    width: 34px; height: 34px; flex: none; border-radius: 9px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--marca-laranja-1), var(--marca-laranja-2)); font-size: 18px;
+  }
+  .sidebar .marca .nome { font-size: 14.5px; font-weight: 700; line-height: 1.2; color: #fff; }
+  .sidebar .marca .nome small { display: block; color: rgba(255,255,255,.58); font-size: 11px; font-weight: 500; }
+  .nav-item {
+    display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+    background: none; border: none; color: rgba(255,255,255,.76); cursor: pointer;
+    padding: 10px 12px; border-radius: 9px; font-size: 13.5px; font-weight: 600;
+    font-family: inherit; transition: background .12s ease, color .12s ease;
+  }
+  .nav-item .ic { font-size: 17px; width: 22px; text-align: center; flex: none; }
+  .nav-item:hover { background: rgba(255,255,255,.09); color: #fff; }
+  .nav-item.ativo { background: rgba(244,121,32,.18); color: var(--marca-laranja-2); box-shadow: inset 3px 0 0 var(--marca-laranja-1); }
+  .sidebar .rodape-nav { margin-top: auto; color: rgba(255,255,255,.42); font-size: 11px; padding: 12px 10px 2px; }
+
+  .painel-principal { flex: 1 1 auto; min-width: 0; }
+  .view { display: none; }
+  .view.ativa { display: block; }
+
+  .topbar-mobile {
+    display: none; align-items: center; gap: 12px; padding: 12px 16px;
+    border-bottom: 1px solid var(--hairline); background: var(--surface); position: sticky; top: 0; z-index: 55;
+  }
+  .topbar-mobile .menu-btn {
+    background: var(--surface-2); border: 1px solid var(--hairline); color: var(--ink);
+    width: 38px; height: 38px; border-radius: 9px; font-size: 17px; cursor: pointer;
+  }
+  .topbar-mobile .titulo-mobile { font-size: 15px; font-weight: 700; }
+  .fundo-sidebar { position: fixed; inset: 0; background: rgba(70,52,30,.34); z-index: 59; display: none; }
+  .fundo-sidebar.aberto { display: block; }
+
+  @media (max-width: 900px) {
+    .sidebar {
+      position: fixed; left: 0; top: 0; transform: translateX(-100%);
+      transition: transform .2s ease; box-shadow: 2px 0 24px rgba(70,52,30,.18);
+    }
+    .sidebar.aberta { transform: translateX(0); }
+    .topbar-mobile { display: flex; }
+  }
+
+  /* ================= Controle de Processos ================= */
+  .wrap { max-width: 1480px; margin: 0 auto; padding: 24px 20px 48px; }
+  .topo { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .topo h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  .topo .sub { color: var(--muted); font-size: 13px; }
+  .topo .acoes { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  a.link-planilha { color: var(--ink-2); font-size: 13px; text-decoration: none; border-bottom: 1px dotted var(--muted); }
+  a.link-planilha:hover { color: var(--ink); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .tile { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 14px 16px; cursor: default; }
+  .tile.clicavel { cursor: pointer; transition: border-color .12s ease, background .12s ease; }
+  .tile.clicavel:hover { background: var(--surface-2); }
+  .tile.ativo { border-color: var(--accent); }
+  .tile .rotulo { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: 6px; }
+  .tile .valor { font-size: 28px; font-weight: 700; margin-top: 4px; }
+  .ponto { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+
+  .filtros {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: end;
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 16px;
+  }
+
   .painel { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; overflow: hidden; }
   .painel-topo { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--hairline); color: var(--ink-2); font-size: 13px; }
   .rolagem { overflow-x: auto; }
@@ -93,328 +192,424 @@
     position: sticky; top: 0; background: var(--surface); z-index: 1;
   }
   th:hover { color: var(--ink-2); }
-  tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+  tbody tr:hover { background: rgba(70, 52, 30, 0.03); }
   td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
   td .proc { font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   td .desc { color: var(--ink); overflow-wrap: anywhere; }
   td .obs { color: var(--ink-2); font-size: 13px; overflow-wrap: anywhere; }
   .vazio { padding: 40px; text-align: center; color: var(--muted); }
 
-  /* Larguras das colunas (table-layout: fixed).
-     Descrição e Obs ficam sem largura fixa e dividem o espaço restante. */
   col.c-processo { width: 150px; }
   col.c-status { width: 172px; }
   col.c-dataStatus { width: 112px; }
   col.c-prazo { width: 178px; }
   col.c-linksRelacionados { width: 150px; }
-  col.c-acoes { width: 122px; }
+  col.c-acoes { width: 156px; }
 
-  /* Coluna de ações fixada à direita — sempre visível, sem rolar */
   th.acoes-col, td.acoes-col {
     position: sticky; right: 0; background: var(--surface); z-index: 2;
-    box-shadow: -10px 0 10px -8px rgba(0, 0, 0, 0.55); white-space: nowrap;
+    box-shadow: -10px 0 10px -8px rgba(70, 52, 30, 0.16); white-space: nowrap;
   }
   th.acoes-col { z-index: 3; }
-  tbody tr:hover td.acoes-col { background: #1f1f1e; }
+  tbody tr:hover td.acoes-col { background: var(--surface-2); }
 
-  /* ---------- Links ---------- */
-  a.link-ext { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(57, 135, 229, 0.35); }
+  a.link-ext { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(244, 121, 32, 0.35); }
   a.link-ext:hover { border-bottom-color: var(--accent); }
   td .proc a.link-ext { color: var(--accent); }
   .links-rel { display: flex; flex-direction: column; gap: 4px; }
-  .links-rel a.link-ext {
-    display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
-    white-space: nowrap; font-size: 13px;
-  }
+  .links-rel a.link-ext { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
   .links-sem { color: var(--muted); }
 
-  /* ---------- Abas (ativos / arquivados) ---------- */
   .abas { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--hairline); }
-  .aba {
-    background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted);
-    padding: 9px 14px; font-size: 13.5px; font-weight: 600; cursor: pointer; margin-bottom: -1px;
-  }
+  .aba { background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); padding: 9px 14px; font-size: 13.5px; font-weight: 600; cursor: pointer; margin-bottom: -1px; font-family: inherit; }
   .aba:hover { color: var(--ink-2); }
   .aba.ativa { color: var(--ink); border-bottom-color: var(--accent); }
-  .aba .contador {
-    display: inline-block; margin-left: 6px; background: var(--surface-3); color: var(--ink-2);
-    border-radius: 999px; padding: 1px 7px; font-size: 11.5px;
-  }
+  .aba .contador { display: inline-block; margin-left: 6px; background: var(--surface-3); color: var(--ink-2); border-radius: 999px; padding: 1px 7px; font-size: 11.5px; }
 
-  /* status como select estilizado de badge */
   select.badge {
     appearance: none; -webkit-appearance: none; border-radius: 999px; font-weight: 600;
-    font-size: 12.5px; padding: 3px 22px 3px 12px; min-height: 0; cursor: pointer;
-    max-width: 100%;
+    font-size: 12.5px; padding: 3px 22px 3px 12px; min-height: 0; cursor: pointer; max-width: 100%;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='6'><path d='M0 0l4 6 4-6z' fill='%23898781'/></svg>");
     background-repeat: no-repeat; background-position: right 8px center;
   }
-
   .prazo-badge { display: inline-block; max-width: 100%; border-radius: 6px; padding: 2px 8px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .prazo-vencido { background: rgba(208, 59, 59, 0.18); color: #ef8a8a; }
-  .prazo-proximo { background: rgba(250, 178, 25, 0.16); color: var(--warning); }
+  .prazo-vencido { background: rgba(220, 38, 38, 0.12); color: var(--critical); }
+  .prazo-proximo { background: rgba(183, 121, 31, 0.14); color: var(--warning); }
   .prazo-normal { color: var(--ink-2); }
   .prazo-sem { color: var(--muted); }
-
   .acao { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 4px 5px; border-radius: 6px; }
   td.acoes-col { padding-left: 8px; padding-right: 8px; }
   .acao:hover { color: var(--ink); background: var(--surface-3); }
-  .acao.excluir:hover { color: #ef8a8a; background: rgba(208, 59, 59, 0.15); }
+  .acao.excluir:hover { color: var(--critical); background: rgba(220, 38, 38, 0.10); }
 
-  /* ---------- Modal ---------- */
-  .fundo-modal {
-    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: none;
-    align-items: flex-start; justify-content: center; padding: 5vh 16px; z-index: 50;
-  }
-  .fundo-modal.aberto { display: flex; }
-  .modal {
-    background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
-    width: 100%; max-width: 620px; padding: 22px; max-height: 90vh; overflow-y: auto;
-  }
-  .modal h2 { font-size: 16px; margin-bottom: 16px; }
-  .modal .grade { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .modal .grade .largura-total { grid-column: 1 / -1; }
-  .modal textarea { resize: vertical; min-height: 64px; }
-  .modal .rodape { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
-  .dica { color: var(--muted); font-size: 11.5px; }
-  .modal.confirmar { max-width: 420px; }
-  .modal.confirmar p { color: var(--ink-2); margin-bottom: 4px; }
-
-  /* ---------- Toast / carregando ---------- */
-  #toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-    background: var(--surface-3); border: 1px solid var(--hairline); color: var(--ink);
-    padding: 10px 18px; border-radius: 10px; font-size: 13.5px; opacity: 0;
-    transition: all .25s ease; z-index: 100; pointer-events: none;
-  }
-  #toast.mostrar { opacity: 1; transform: translateX(-50%) translateY(0); }
-  #toast.erro { border-color: var(--critical); }
-
-  #carregando {
-    position: fixed; inset: 0; background: rgba(13, 13, 13, 0.65); z-index: 90;
-    display: none; align-items: center; justify-content: center; color: var(--ink-2); gap: 10px;
-  }
-  #carregando.ativo { display: flex; }
-  .girar { width: 18px; height: 18px; border: 2px solid var(--hairline); border-top-color: var(--accent); border-radius: 50%; animation: girar .8s linear infinite; }
-  @keyframes girar { to { transform: rotate(360deg); } }
-
-  /* ---------- Telas sem espaço para a tabela cheia: vira cartões ----------
-     A tabela tem 6 colunas de largura fixa (~884px) + Descrição/Obs, que
-     precisam de espaço extra para não serem espremidas. Abaixo de ~1300px
-     (bem menor que uma janela cheia, cobre janelas "meio de tela" também)
-     usamos cartões em vez de arriscar colunas de texto quebradas letra a
-     letra. */
   @media (max-width: 1300px) {
     .wrap { padding: 16px 12px 40px; }
-    .painel { border-radius: 12px; }
     .painel-topo { padding: 10px 14px; }
     .rolagem { overflow-x: visible; }
     table { min-width: 0; width: 100%; table-layout: auto; }
     table colgroup, thead { display: none; }
     tbody, tr, td { display: block; width: auto; }
     tbody { padding: 10px 12px; }
-    tr {
-      border: 1px solid var(--hairline); border-radius: 12px; background: var(--surface-2);
-      padding: 12px 14px; margin-bottom: 12px;
-    }
+    tr { border: 1px solid var(--hairline); border-radius: 12px; background: var(--surface-2); padding: 12px 14px; margin-bottom: 12px; }
     tbody tr:last-child td { border-bottom: 1px solid var(--hairline); }
-    td {
-      border: none; border-bottom: 1px solid var(--hairline);
-      padding: 8px 0; display: flex; flex-direction: column; gap: 4px;
-    }
+    td { border: none; border-bottom: 1px solid var(--hairline); padding: 8px 0; display: flex; flex-direction: column; gap: 4px; }
     tr td:last-child { border-bottom: none; padding-bottom: 0; }
     tr td:first-child { padding-top: 0; }
-    td[data-rotulo]::before {
-      content: attr(data-rotulo);
-      color: var(--muted); font-size: 10.5px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .05em;
-    }
-    /* Célula de ações: rótulo e botões lado a lado, coluna não mais fixa */
-    td.acoes-col {
-      position: static; box-shadow: none; background: none;
-      flex-direction: row; gap: 8px; padding-top: 12px;
-    }
+    td[data-rotulo]::before { content: attr(data-rotulo); color: var(--muted); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+    td.acoes-col { position: static; box-shadow: none; background: none; flex-direction: row; gap: 8px; padding-top: 12px; }
     td.acoes-col .acao { font-size: 20px; padding: 6px 10px; border: 1px solid var(--hairline); }
-    /* Elementos que não devem esticar/ficar recortados dentro do cartão */
     select.badge { max-width: none; width: max-content; }
     .prazo-badge { max-width: none; }
     .links-rel a.link-ext { max-width: 100%; }
     td .proc, td .desc, td .obs { overflow-wrap: anywhere; word-break: break-word; }
     .vazio { padding: 28px 12px; }
   }
-
   @media (max-width: 640px) {
     .modal .grade { grid-template-columns: 1fr; }
     .topo { justify-content: space-between; }
     .topo .acoes { margin-left: 0; width: 100%; }
     .abas { overflow-x: auto; }
   }
+
+  /* ================= Planner ================= */
+  .planner-wrap { max-width: 1280px; margin: 0 auto; padding: 24px 20px 48px; }
+  .cal-cabecalho { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+  .cal-cabecalho h1 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; min-width: 150px; }
+  .cal-nav { display: flex; align-items: center; gap: 6px; }
+  .cal-nav button { background: var(--surface-2); border: 1px solid var(--hairline); color: var(--ink); width: 34px; height: 34px; border-radius: 8px; font-size: 15px; cursor: pointer; }
+  .cal-nav button:hover { background: var(--surface-3); }
+  .seg-toggle { display: inline-flex; background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 9px; padding: 2px; }
+  .seg-toggle button { background: none; border: none; color: var(--muted); font-weight: 600; font-size: 13px; padding: 6px 15px; border-radius: 7px; cursor: pointer; font-family: inherit; }
+  .seg-toggle button.ativo { background: var(--surface-3); color: var(--ink); }
+  .cal-cabecalho .acoes { margin-left: auto; display: flex; gap: 10px; }
+
+  .cal-legenda { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 18px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 10px; }
+  .cal-legenda .leg-rot { color: var(--muted); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-right: 4px; }
+  .cal-legenda .item { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12px; }
+  .cal-legenda .leg-cat { background: none; border: 1px solid transparent; cursor: pointer; font-family: inherit; padding: 3px 9px; border-radius: 999px; font-weight: 600; transition: background .12s ease, opacity .12s ease; }
+  .cal-legenda .leg-cat:hover { background: var(--surface-2); }
+  .cal-legenda .leg-cat.off { opacity: .45; }
+  .cal-legenda .leg-cat.off .ponto { background: var(--muted) !important; }
+  .cal-legenda .ponto { width: 9px; height: 9px; border-radius: 3px; }
+
+  /* Visão anual: 12 mini-meses */
+  .mini-grade-ano { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 14px; }
+  .mini-mes { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 12px 12px 14px; }
+  .mini-mes.tem-hoje { border-color: rgba(244,121,32,.55); box-shadow: 0 0 0 1px rgba(244,121,32,.25) inset; }
+  .mini-mes h4 { font-size: 13.5px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; cursor: pointer; }
+  .mini-mes h4:hover { color: var(--accent); }
+  .mini-mes h4 .cont { color: var(--muted); font-size: 10.5px; font-weight: 600; min-width: 14px; text-align: right; }
+  .mini-semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 3px; }
+  .mini-semana span { text-align: center; font-size: 9.5px; color: var(--muted); font-weight: 700; }
+  .mini-semana-linha { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .mini-dia { height: 22px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--ink-2); border-radius: 6px; cursor: pointer; font-variant-numeric: tabular-nums; }
+  .mini-dia.vazia { cursor: default; }
+  .mini-dia:not(.vazia):hover { background: var(--surface-2); }
+  .mini-dia.hoje { background: var(--accent); color: #fff; font-weight: 700; }
+  /* Faixa semanal de barras: eventos contínuos atravessam os dias */
+  .mini-barras { display: grid; grid-template-columns: repeat(7, 1fr); column-gap: 2px; grid-auto-rows: 4px; row-gap: 2px; margin: 2px 0 4px; min-height: 4px; max-height: 16px; overflow: hidden; }
+  .mini-barra { height: 4px; border-radius: 3px; }
+
+  /* Tooltip de resumo do dia (hover) */
+  .cal-tooltip { position: fixed; z-index: 78; max-width: 300px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(70,52,30,.16); font-size: 12.5px; pointer-events: none; display: none; }
+  .cal-tooltip.mostrar { display: block; }
+  .cal-tooltip .tt-data { font-weight: 700; font-size: 12.5px; margin-bottom: 6px; color: var(--ink); }
+  .cal-tooltip .tt-item { display: flex; align-items: flex-start; gap: 7px; padding: 3px 0; color: var(--ink-2); }
+  .cal-tooltip .tt-item .pt { width: 8px; height: 8px; border-radius: 3px; flex: none; margin-top: 4px; }
+  .cal-tooltip .tt-flags { display: flex; flex-wrap: wrap; gap: 5px; margin: 1px 0 2px 15px; }
+  .cal-tooltip .tt-flag { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; font-weight: 700; }
+
+  /* Visão mensal detalhada */
+  .cal { background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden; }
+  .cal-semana-nomes, .cal-grade { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-semana-nomes { border-bottom: 1px solid var(--hairline); }
+  .cal-semana-nomes div { padding: 10px 12px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; text-align: center; }
+  .cal-dia { min-height: 118px; border-right: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); padding: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 5px; transition: background .12s ease; }
+  .cal-dia:nth-child(7n) { border-right: none; }
+  .cal-dia:hover { background: var(--surface-2); }
+  .cal-dia.fora { background: rgba(70,52,30,.025); }
+  .cal-dia.fora .cal-num { color: var(--muted); opacity: .5; }
+  .cal-num { font-size: 12.5px; font-weight: 600; color: var(--ink-2); align-self: flex-start; width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; }
+  .cal-dia.hoje .cal-num { background: var(--accent); color: #fff; }
+  .cal-chip { font-size: 11.5px; line-height: 1.3; padding: 3px 7px; border-radius: 6px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid; }
+  .cal-chip.feito { opacity: .55; text-decoration: line-through; }
+  .cal-mais { font-size: 11px; color: var(--muted); font-weight: 600; padding-left: 4px; }
+
+  .drawer-fundo { position: fixed; inset: 0; background: rgba(70,52,30,.34); z-index: 70; display: none; }
+  .drawer-fundo.aberto { display: block; }
+  .drawer { position: fixed; top: 0; right: 0; height: 100vh; width: 400px; max-width: 92vw; background: var(--surface); border-left: 1px solid var(--hairline); z-index: 71; transform: translateX(100%); transition: transform .2s ease; display: flex; flex-direction: column; box-shadow: -12px 0 30px rgba(70,52,30,.14); }
+  .drawer.aberto { transform: translateX(0); }
+  .drawer-topo { display: flex; align-items: center; gap: 10px; padding: 18px 20px; border-bottom: 1px solid var(--hairline); }
+  .drawer-topo .dia-txt { font-size: 16px; font-weight: 700; }
+  .drawer-topo .dia-sub { color: var(--muted); font-size: 12px; }
+  .drawer-topo .fechar { margin-left: auto; background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; }
+  .drawer-topo .fechar:hover { color: var(--ink); }
+  .drawer-corpo { padding: 16px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .drawer-rodape { padding: 14px 20px; border-top: 1px solid var(--hairline); }
+  .drawer-rodape .btn { width: 100%; }
+  .ativ-card { background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 11px; padding: 12px 14px; border-left: 4px solid; display: flex; flex-direction: column; gap: 6px; }
+  .ativ-card .linha1 { display: flex; align-items: flex-start; gap: 8px; }
+  .ativ-card .titulo { font-weight: 700; font-size: 14px; flex: 1; overflow-wrap: anywhere; }
+  .ativ-card.feita .titulo { text-decoration: line-through; color: var(--muted); }
+  .ativ-card .hora { color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .ativ-card .cat-tag { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
+  .ativ-card .desc { color: var(--ink-2); font-size: 12.5px; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .ativ-card .acoes { display: flex; gap: 4px; }
+  .ativ-card .acoes button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 3px 5px; border-radius: 6px; }
+  .ativ-card .acoes button:hover { color: var(--ink); background: var(--surface-3); }
+  .drawer-vazio { color: var(--muted); text-align: center; padding: 30px 10px; font-size: 13px; }
+  .ativ-card .titulo.clicavel { cursor: pointer; }
+  .ativ-card .titulo.clicavel:hover { color: var(--accent); }
+
+  /* Cartão de evento (detalhe) */
+  .evento-cab { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+  .evento-cab .barra { width: 4px; align-self: stretch; border-radius: 3px; flex: none; }
+  .evento-cab h2 { font-size: 17px; margin: 0 0 4px; }
+  .evento-cab .meta { color: var(--muted); font-size: 12.5px; }
+  .evento-secao { border-top: 1px solid var(--hairline); padding: 12px 0; }
+  .evento-secao:first-of-type { border-top: none; }
+  .evento-secao .rot { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .evento-secao .txt { color: var(--ink-2); font-size: 13.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ref-lista { display: flex; flex-direction: column; gap: 6px; }
+  .ref-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .ref-item .sei-num { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
+  .ref-item a.link-ext { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .evento-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .evento-acoes .btn { flex: 1 1 auto; }
+  .badge-info { display: inline-flex; align-items: center; gap: 5px; background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--ink-2); }
+
+  /* Gerador de documento */
+  .doc-saida { background: var(--page); border: 1px solid var(--hairline); border-radius: 10px; padding: 14px; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12.5px; line-height: 1.65; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 46vh; overflow-y: auto; min-height: 200px; }
+
+  /* Resumo */
+  .resumo-cabecalho { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .resumo-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 10px; margin-bottom: 16px; }
+  .resumo-tile { background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 10px; padding: 10px 12px; }
+  .resumo-tile .rot { color: var(--muted); font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .resumo-tile .val { font-size: 22px; font-weight: 700; margin-top: 2px; }
+  .resumo-lista { display: flex; flex-direction: column; gap: 8px; max-height: 42vh; overflow-y: auto; }
+  .resumo-dia { border-left: 3px solid; padding: 6px 10px; background: var(--surface-2); border-radius: 8px; }
+  .resumo-dia .rd-data { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+  .resumo-dia .rd-item { font-size: 12.5px; color: var(--ink-2); }
+  .resumo-vazio { color: var(--muted); text-align: center; padding: 24px; }
+
+  /* Progresso / checklist */
+  .progresso-rot { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-bottom: 5px; }
+  .progresso { height: 8px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
+  .progresso > i { display: block; height: 100%; background: var(--good); border-radius: 999px; transition: width .25s ease; }
+  .checklist { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+  .chk-item { display: flex; align-items: center; gap: 9px; padding: 3px 0; }
+  .chk-item input[type="checkbox"] { min-height: 0; width: 17px; height: 17px; accent-color: var(--good); cursor: pointer; flex: none; }
+  .chk-item label { flex: 1; font-size: 13.5px; color: var(--ink-2); cursor: pointer; overflow-wrap: anywhere; }
+  .chk-item.feito label { text-decoration: line-through; color: var(--muted); }
+  .chk-item .del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 6px; }
+  .chk-item .del:hover { color: var(--critical); background: rgba(220,38,38,.10); }
+  .chk-add { display: flex; gap: 6px; margin-top: 8px; }
+  .chk-add input { flex: 1; }
+  .chk-vazio { color: var(--muted); font-size: 13px; padding: 4px 0; }
+  .mini-prog { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--muted); }
+  .mini-prog .barra { flex: 1; height: 5px; background: var(--surface-3); border-radius: 999px; overflow: hidden; max-width: 130px; }
+  .mini-prog .barra > i { display: block; height: 100%; background: var(--good); }
+
+  /* Indicador de prazos (cores de status, sempre com ícone + rótulo) */
+  .prazos-bloco { border-top: 1px solid var(--hairline); margin-top: 6px; padding-top: 14px; }
+  .prazos-bloco h3 { font-size: 13px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+  .prazos-barra { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--surface-3); margin-bottom: 10px; gap: 2px; }
+  .prazos-barra > span { height: 100%; }
+  .prazo-legenda { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; font-size: 12px; color: var(--ink-2); }
+  .prazo-legenda .item { display: flex; align-items: center; gap: 6px; }
+  .prazo-legenda .ponto { width: 9px; height: 9px; border-radius: 3px; }
+  .prazo-lista { display: flex; flex-direction: column; max-height: 30vh; overflow-y: auto; }
+  .prazo-linha { display: flex; align-items: center; gap: 10px; padding: 7px 2px; border-top: 1px solid var(--hairline); }
+  .prazo-linha .quando { width: 92px; flex: none; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .prazo-linha .rotulo { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .prazo-pill { flex: none; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+
+  @media (max-width: 640px) {
+    .planner-wrap { padding: 16px 12px 40px; }
+    .cal-cabecalho .acoes { margin-left: 0; width: 100%; }
+    .cal-dia { min-height: 84px; padding: 5px; }
+    .cal-num { width: 22px; height: 22px; }
+    .cal-chip { display: none; }
+    .cal-dia::after { content: attr(data-qtd); color: var(--accent); font-size: 10px; font-weight: 700; }
+  }
+
+  /* ================= Banco de Skills ================= */
+  .skills-wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 48px; }
+  .skills-topo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+  .skills-topo h1 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+  .skills-topo .sub { color: var(--muted); font-size: 13px; }
+  .btn-upload { flex: none; width: 46px; height: 46px; border-radius: 12px; border: 1px solid transparent; background: var(--accent); color: #fff; font-size: 20px; cursor: pointer; display: grid; place-items: center; transition: filter .12s ease, transform .12s ease; box-shadow: 0 4px 12px rgba(244,121,32,.3); }
+  .btn-upload:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn-upload:active { transform: translateY(0); }
+  .dropzone { border: 1.5px dashed var(--hairline); border-radius: 14px; padding: 26px; text-align: center; color: var(--ink-2); cursor: pointer; transition: border-color .15s ease, background .15s ease; margin-bottom: 22px; background: var(--surface); }
+  .dropzone:hover, .dropzone.arrastando { border-color: var(--accent); background: var(--surface-2); }
+  .dropzone .icone { font-size: 26px; margin-bottom: 6px; }
+  .dropzone strong { color: var(--ink); }
+  .dropzone .dica { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .skills-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .skill-card { background: var(--surface); border: 1px solid var(--hairline); border-radius: 13px; padding: 16px; display: flex; flex-direction: column; gap: 9px; cursor: pointer; transition: border-color .12s ease, background .12s ease; }
+  .skill-card:hover { border-color: rgba(85,62,35,.28); background: var(--surface-2); }
+  .skill-card .cab { display: flex; align-items: center; gap: 11px; }
+  .skill-card .icone { width: 42px; height: 42px; flex: none; border-radius: 11px; display: grid; place-items: center; font-size: 22px; background: var(--accent-suave); }
+  .skill-card .cab-txt { min-width: 0; }
+  .skill-card .nome { font-size: 15.5px; font-weight: 700; letter-spacing: -.01em; overflow-wrap: anywhere; line-height: 1.25; }
+  .skill-card .slug { font-size: 11px; color: var(--muted); font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .skill-card .descricao { color: var(--ink-2); font-size: 13px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .skill-card .descricao.vazia { font-style: italic; color: var(--muted); }
+  .skill-card .rodape { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 4px; }
+  .skill-card .arq { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .skill-card .acoes { display: flex; gap: 2px; }
+  .skill-card .acoes button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 4px 5px; border-radius: 6px; }
+  .skill-card .acoes button:hover { color: var(--ink); background: var(--surface-3); }
+  .skills-vazio { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 40px; }
+  .conteudo-skill { background: var(--page); border: 1px solid var(--hairline); border-radius: 10px; padding: 14px; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12.5px; line-height: 1.6; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 52vh; overflow-y: auto; }
+
+  /* ================= Kanban ================= */
+  .kanban-wrap { max-width: 1400px; margin: 0 auto; padding: 24px 20px 48px; }
+  .kanban-topo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .kanban-topo h1 { font-size: 20px; font-weight: 700; }
+  .kanban-topo .proj-sel { min-width: 210px; }
+  .kanban-topo .acoes { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  .kanban-vazio { background: var(--surface); border: 1px dashed var(--hairline); border-radius: 14px; padding: 46px 20px; text-align: center; color: var(--muted); }
+  .kanban-vazio strong { color: var(--ink); display: block; font-size: 15px; margin-bottom: 4px; }
+  .proj-desc { color: var(--muted); font-size: 13px; margin: -6px 0 14px; }
+
+  .kb-board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; align-items: flex-start; }
+  .kb-coluna { flex: 0 0 272px; width: 272px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; display: flex; flex-direction: column; max-height: 74vh; }
+  .kb-col-topo { display: flex; align-items: center; gap: 8px; padding: 11px 13px; border-bottom: 1px solid var(--hairline); font-weight: 700; font-size: 13.5px; }
+  .kb-col-topo .qtd { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 600; background: var(--surface-2); border-radius: 999px; padding: 1px 9px; }
+  .kb-col-topo .qtd.excede { color: var(--critical); background: rgba(220,38,38,.12); }
+  .kb-col-topo .ponto-col { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .kb-lista { padding: 10px; display: flex; flex-direction: column; gap: 9px; overflow-y: auto; flex: 1; min-height: 60px; }
+  .kb-lista.dragover { background: var(--accent-suave); box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0 0 12px 12px; }
+  .kb-card { background: var(--surface-2); border: 1px solid var(--hairline); border-left: 3px solid var(--muted); border-radius: 10px; padding: 10px 12px; cursor: grab; display: flex; flex-direction: column; gap: 6px; }
+  .kb-card:active { cursor: grabbing; }
+  .kb-card.arrastando { opacity: .45; }
+  .kb-card .titulo { font-weight: 600; font-size: 13.5px; overflow-wrap: anywhere; }
+  .kb-card .desc { color: var(--ink-2); font-size: 12px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .kb-card .rodape { display: flex; align-items: center; gap: 8px; }
+  .kb-prazo { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+  .kb-card .mover { margin-left: auto; display: flex; gap: 2px; }
+  .kb-card .mover button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 2px 4px; border-radius: 5px; }
+  .kb-card .mover button:hover { color: var(--ink); background: var(--surface-3); }
+  .kb-add { margin: 2px 10px 12px; }
+  .kb-add button { width: 100%; background: none; border: 1px dashed var(--hairline); color: var(--muted); border-radius: 9px; padding: 8px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; }
+  .kb-add button:hover { color: var(--accent); border-color: var(--accent); }
+  .kb-cron { width: 100%; text-align: left; background: none; border: 1px dashed var(--hairline); color: var(--ink-2); border-radius: 9px; padding: 7px 10px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .kb-cron:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-suave); }
+  .kb-card.tem-cron .kb-cron { border-style: solid; color: var(--accent); border-color: rgba(244,121,32,.35); }
+  .cron-cab { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .cron-titulo { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+
+  /* ---------- Cronograma (Gantt) ---------- */
+  .gantt { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 4px 0 12px; overflow-x: auto; }
+  .gantt-cab, .gantt-linha { display: grid; grid-template-columns: 200px 1fr; align-items: center; }
+  .gantt-cab { border-bottom: 1px solid var(--hairline); position: sticky; top: 0; }
+  .gantt-cab .canto { padding: 10px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .gantt-meses { display: flex; position: relative; }
+  .gantt-mes { border-left: 1px solid var(--hairline); padding: 8px 8px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); white-space: nowrap; box-sizing: border-box; }
+  .gantt-linha { border-bottom: 1px solid var(--hairline); }
+  .gantt-linha:last-child { border-bottom: none; }
+  .gantt-fase-info { padding: 10px 14px; min-width: 0; }
+  .gantt-fase-info .nome { font-weight: 600; font-size: 13px; overflow-wrap: anywhere; cursor: pointer; }
+  .gantt-fase-info .nome:hover { color: var(--accent); }
+  .gantt-fase-info .datas { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .gantt-faixa { position: relative; height: 46px; }
+  .gantt-grade { position: absolute; inset: 0; display: flex; }
+  .gantt-grade > span { border-left: 1px solid var(--hairline); box-sizing: border-box; }
+  .gantt-barra { position: absolute; top: 11px; height: 24px; border-radius: 7px; overflow: hidden; min-width: 6px; box-shadow: 0 1px 3px rgba(70,52,30,.18); cursor: pointer; display: flex; align-items: center; }
+  .gantt-prog { position: absolute; inset: 0; width: 0; background: rgba(255,255,255,.32); border-right: 2px solid rgba(255,255,255,.7); }
+  .gantt-barra .rot { position: relative; z-index: 1; font-size: 11px; font-weight: 700; color: #fff; padding: 0 8px; white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,.25); }
+  .gantt-hoje { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--critical); z-index: 3; }
+  .gantt-hoje::after { content: 'hoje'; position: absolute; top: -1px; left: 3px; font-size: 9.5px; font-weight: 700; color: var(--critical); }
+  .gantt-vazio { padding: 40px 20px; text-align: center; color: var(--muted); }
+
+  /* ---- Kanban: barra de ferramentas e cartões enriquecidos ---- */
+  .kb-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .kb-toolbar .busca { flex: 1 1 220px; min-width: 160px; }
+  .kb-toolbar select { min-width: 120px; }
+  .kb-chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .kb-chip { font-size: 10.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+  .kb-tag { font-size: 10.5px; padding: 1px 7px; border-radius: 6px; background: var(--surface-3); color: var(--ink-2); font-weight: 600; }
+  .kb-bloq { font-size: 10.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: rgba(220,38,38,.14); color: var(--critical); }
+  .kb-card.bloq { box-shadow: inset 0 0 0 1.5px rgba(220,38,38,.45); }
+  .kb-card .rodape { justify-content: flex-start; }
+  .kb-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent-suave); color: var(--accent); font-size: 10px; font-weight: 700; display: grid; place-items: center; flex: none; }
+  .kb-card .rodape .dir { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+  /* Modal de colunas */
+  .col-linha { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .col-linha input.nome { flex: 1; }
+  .col-linha input.wip { width: 78px; }
+  .col-linha .rm { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 4px 6px; border-radius: 6px; }
+  .col-linha .rm:hover { color: var(--critical); background: rgba(220,38,38,.10); }
+
+  /* ---- Gantt com zoom (px, rolagem horizontal, coluna fixa) ---- */
+  .gantt-scroll { overflow-x: auto; border: 1px solid var(--hairline); border-radius: 12px; background: var(--surface); }
+  .gantt-inner { position: relative; }
+  .g-row { display: flex; border-bottom: 1px solid var(--hairline); }
+  .g-row:last-child { border-bottom: none; }
+  .g-head { position: sticky; top: 0; z-index: 5; }
+  .g-label { flex: none; box-sizing: border-box; padding: 9px 12px; position: sticky; left: 0; background: var(--surface-2); z-index: 2; border-right: 2px solid var(--hairline); }
+  .g-head .g-label { z-index: 6; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); display: flex; align-items: center; background: var(--surface-3); }
+  .g-label .nome { font-weight: 600; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
+  .g-label .nome:hover { color: var(--accent); }
+  .g-label .sub { color: var(--ink-2); font-size: 11.5px; overflow-wrap: anywhere; }
+  .g-label .datas { color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .g-track { position: relative; box-sizing: border-box; flex: none; }
+  .g-axis { display: flex; }
+  .g-unit { border-left: 1px solid var(--hairline); box-sizing: border-box; font-size: 11px; color: var(--ink-2); padding: 8px 6px; white-space: nowrap; font-weight: 600; overflow: hidden; }
+  .g-grid { position: absolute; inset: 0; display: flex; pointer-events: none; }
+  .g-grid > span { border-left: 1px solid var(--hairline); box-sizing: border-box; }
+  .g-faixa { position: relative; height: 46px; }
+  .g-bar { position: absolute; top: 11px; height: 24px; border-radius: 7px; overflow: hidden; display: flex; align-items: center; cursor: pointer; box-shadow: 0 1px 3px rgba(70,52,30,.22); min-width: 8px; z-index: 1; }
+  .g-prog { position: absolute; inset: 0; background: rgba(255,255,255,.34); border-right: 2px solid rgba(255,255,255,.78); }
+  .g-bar .rot { position: relative; z-index: 1; font-size: 11px; font-weight: 700; color: #fff; padding: 0 8px; white-space: nowrap; text-shadow: 0 1px 1px rgba(0,0,0,.3); overflow: hidden; text-overflow: ellipsis; }
+  .g-pct { position: absolute; top: 11px; height: 24px; display: flex; align-items: center; font-size: 11.5px; font-weight: 800; color: var(--ink); white-space: nowrap; z-index: 2; }
+  .g-nome-bar { position: absolute; top: 11px; height: 24px; display: flex; align-items: center; font-size: 11.5px; color: var(--ink-2); white-space: nowrap; z-index: 1; }
+  .g-marco { position: absolute; top: 12px; width: 20px; height: 20px; transform: translateX(-10px) rotate(45deg); border-radius: 4px; cursor: pointer; box-shadow: 0 1px 3px rgba(70,52,30,.3); z-index: 2; }
+  .g-hoje { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--critical); z-index: 3; }
+  .g-hoje::after { content: 'hoje'; position: absolute; top: 2px; left: 3px; font-size: 9.5px; font-weight: 700; color: var(--critical); }
+
+  /* Hierarquia Fase -> Tarefas no Gantt */
+  .g-lab-topo { display: flex; align-items: center; gap: 5px; }
+  .g-toggle { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 11px; padding: 0 2px; width: 16px; flex: none; }
+  .g-toggle:hover { color: var(--ink); }
+  .g-toggle-vazio { width: 16px; flex: none; display: inline-block; }
+  .g-addtar { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 15px; padding: 0 4px; flex: none; margin-left: auto; line-height: 1; }
+  .g-addtar:hover { color: var(--accent); }
+  .g-label.tarefa { background: var(--surface); }
+  .g-label.tarefa .nome { font-weight: 500; font-size: 12.5px; }
+  .g-label.tarefa .datas { font-size: 10px; }
+  .g-bar.tarefa { height: 15px; top: 15px; opacity: .9; }
+
+  /* Banner de vínculo do Gantt ao projeto */
+  .gantt-proj { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 13px; margin-bottom: 12px; background: var(--accent-suave); border: 1px solid rgba(244,121,32,.28); border-radius: 999px; padding: 5px 14px; }
+  .gantt-proj b { color: var(--accent); }
+
+  /* Panorama do projeto */
+  .pan-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .pan-tile { background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 10px; padding: 9px 12px; }
+  .pan-tile .r { color: var(--muted); font-size: 11px; font-weight: 600; }
+  .pan-tile .v { font-size: 17px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .pan-lista { display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; }
+  .pan-fase { border-left: 4px solid var(--muted); padding: 9px 12px; background: var(--surface-2); border-radius: 8px; }
+  .pan-fase .cab { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .pan-fase .nome { font-weight: 700; font-size: 14px; }
+  .pan-fase .per { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .pan-badge { font-size: 10.5px; font-weight: 700; padding: 1px 9px; border-radius: 999px; margin-left: auto; }
+  .pan-tar { display: flex; gap: 10px; font-size: 12.5px; color: var(--ink-2); padding: 3px 0 0 6px; }
+  .pan-tar .tn { flex: 1; overflow-wrap: anywhere; }
+  .pan-vazio { color: var(--muted); text-align: center; padding: 24px; }
 </style>
 </head>
 <body>
 
-<div class="wrap">
-  <div class="topo">
-    <div>
-      <h1>Controle de Processos</h1>
-      <div class="sub" id="subtitulo">Carregando…</div>
-    </div>
-    <div class="acoes">
-      <a class="link-planilha" id="linkPlanilha" href="#" target="_blank" rel="noopener" style="display:none">Abrir planilha ↗</a>
-      <button class="btn primario" id="btnNovo">+ Novo processo</button>
-    </div>
-  </div>
-
-  <div class="tiles" id="tiles"></div>
-
-  <div class="filtros">
-    <div class="campo crescer">
-      <label for="fBusca">Buscar</label>
-      <input type="search" id="fBusca" placeholder="Processo, descrição ou observações…">
-    </div>
-    <div class="campo">
-      <label for="fStatus">Status</label>
-      <select id="fStatus"><option value="">Todos</option></select>
-    </div>
-    <div class="campo">
-      <label for="fDe">Mudança de status — de</label>
-      <input type="date" id="fDe">
-    </div>
-    <div class="campo">
-      <label for="fAte">Até</label>
-      <input type="date" id="fAte">
-    </div>
-    <div class="campo">
-      <label>&nbsp;</label>
-      <button class="btn" id="btnLimpar">Limpar filtros</button>
-    </div>
-  </div>
-
-  <div class="abas" id="abas">
-    <button class="aba ativa" data-aba="ativos">Ativos<span class="contador" id="contAtivos">0</span></button>
-    <button class="aba" data-aba="arquivados">Arquivados<span class="contador" id="contArquivados">0</span></button>
-  </div>
-
-  <div class="painel">
-    <div class="painel-topo"><span id="contagem"></span></div>
-    <div class="rolagem">
-      <table>
-        <colgroup>
-          <col class="c-processo">
-          <col class="c-descricao">
-          <col class="c-status">
-          <col class="c-dataStatus">
-          <col class="c-prazo">
-          <col class="c-obs">
-          <col class="c-linksRelacionados">
-          <col class="c-acoes">
-        </colgroup>
-        <thead>
-          <tr>
-            <th data-col="processo">Processo</th>
-            <th data-col="descricao">Descrição</th>
-            <th data-col="status">Status</th>
-            <th data-col="dataStatus">Mudança de status</th>
-            <th data-col="prazo">Prazo</th>
-            <th data-col="obs">Obs</th>
-            <th data-col="linksRelacionados">Links relacionados</th>
-            <th class="acoes-col"></th>
-          </tr>
-        </thead>
-        <tbody id="corpoTabela"></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- Modal de cadastro/edição -->
-<div class="fundo-modal" id="fundoForm">
-  <div class="modal">
-    <h2 id="tituloForm">Novo processo</h2>
-    <form id="formProcesso">
-      <input type="hidden" id="cLinha">
-      <div class="grade">
-        <div class="campo">
-          <label for="cProcesso">Processo (nº ou identificador)</label>
-          <input id="cProcesso" placeholder="1400.01.0000000/2026-00">
-        </div>
-        <div class="campo">
-          <label for="cStatus">Status</label>
-          <select id="cStatus" required></select>
-        </div>
-        <div class="campo largura-total">
-          <label for="cLink">Link do processo (SEI)</label>
-          <input id="cLink" placeholder="https://sei.mg.gov.br/...">
-          <span class="dica">Cole o endereço do SEI. O nº do processo vira um link clicável.</span>
-        </div>
-        <div class="campo largura-total">
-          <label for="cDescricao">Descrição</label>
-          <textarea id="cDescricao" required></textarea>
-        </div>
-        <div class="campo">
-          <label for="cDataStatus">Data de mudança de status</label>
-          <input type="date" id="cDataStatus" required>
-          <span class="dica">Atualizada para hoje ao trocar o status.</span>
-        </div>
-        <div class="campo">
-          <label for="cPrazo">Prazo</label>
-          <input type="date" id="cPrazo">
-          <span class="dica">Deixe vazio se não houver prazo.</span>
-        </div>
-        <div class="campo largura-total">
-          <label for="cLinksRelacionados">Links relacionados</label>
-          <textarea id="cLinksRelacionados" placeholder="https://exemplo.com&#10;Rótulo | https://outro.com"></textarea>
-          <span class="dica">Um link por linha. Opcional: "Rótulo | https://endereço".</span>
-        </div>
-        <div class="campo largura-total">
-          <label for="cObs">Observações</label>
-          <textarea id="cObs"></textarea>
-        </div>
-      </div>
-      <div class="rodape">
-        <button type="button" class="btn perigo" id="btnExcluirForm" style="margin-right:auto;display:none">Excluir</button>
-        <button type="button" class="btn" id="btnArquivarForm" style="display:none">Arquivar</button>
-        <button type="button" class="btn" id="btnCancelar">Cancelar</button>
-        <button type="submit" class="btn primario" id="btnSalvar">Salvar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal de confirmação de exclusão -->
-<div class="fundo-modal" id="fundoConfirmar">
-  <div class="modal confirmar">
-    <h2>Excluir processo</h2>
-    <p id="textoConfirmar"></p>
-    <div class="rodape">
-      <button type="button" class="btn" id="btnVoltarEdicao">Voltar à edição</button>
-      <button type="button" class="btn" id="btnConfirmarNao">Cancelar</button>
-      <button type="button" class="btn perigo" id="btnConfirmarSim">Excluir</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast"></div>
-<div id="carregando"><div class="girar"></div><span>Processando…</span></div>
-
 <script>
-  var dados = [];
-  var urlPlanilha = '';
-  var ordenacao = { col: 'dataStatus', dir: 'desc' };
-  var linhaParaExcluir = null;
-  var abaAtual = 'ativos';
-  var DIAS_ALERTA_PRAZO = 2;
-  var STATUS_PADRAO = ['Em Andamento', 'Concluído', 'Consulta', 'Não iniciado'];
-
-  // Paleta de status (cores validadas para superfície escura)
-  var CORES_STATUS = {
-    'Em Andamento': '#3987e5',
-    'Consulta': '#9085e9',
-    'Não iniciado': '#898781',
-    'Concluído': '#0ca30c'
-  };
-  var COR_STATUS_PADRAO = '#199e70';
-
+  /* ================= Fundamentos compartilhados =================
+   * Helpers usados por todas as telas. Definidos antes dos scripts das
+   * abas (Gestao/Planner/Skills), que os utilizam ao registrar eventos. */
   var $ = function (id) { return document.getElementById(id); };
 
   function escapar(s) {
@@ -422,20 +617,16 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-
   function ehData(v) { return /^\d{4}-\d{2}-\d{2}$/.test(v || ''); }
-
   function formatarData(iso) {
     if (!ehData(iso)) return iso || '-';
     var p = iso.split('-');
     return p[2] + '/' + p[1] + '/' + p[0];
   }
-
   function hojeIso() {
     var d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
-
   function diasAte(iso) {
     if (!ehData(iso)) return null;
     var hoje = hojeIso().split('-'), alvo = iso.split('-');
@@ -443,94 +634,10 @@
     var b = new Date(Number(alvo[0]), Number(alvo[1]) - 1, Number(alvo[2]));
     return Math.round((b - a) / 86400000);
   }
-
-  function corDoStatus(s) { return CORES_STATUS[s] || COR_STATUS_PADRAO; }
-
   function rgba(hex, alfa) {
     var n = parseInt(hex.slice(1), 16);
     return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alfa + ')';
   }
-
-  function statusConhecidos() {
-    var lista = STATUS_PADRAO.slice();
-    Object.keys(CORES_STATUS).forEach(function (s) { if (lista.indexOf(s) === -1) lista.push(s); });
-    dados.forEach(function (p) { if (p.status && lista.indexOf(p.status) === -1) lista.push(p.status); });
-    return lista;
-  }
-
-  // ---------- Links ----------
-  function ehUrl(s) { return /^(https?:\/\/|www\.)\S+$/i.test(String(s == null ? '' : s).trim()); }
-
-  function normalizarUrl(s) {
-    s = String(s == null ? '' : s).trim();
-    return /^www\./i.test(s) ? 'https://' + s : s;
-  }
-
-  function rotuloUrl(url) {
-    var m = String(url).replace(/^https?:\/\//i, '').replace(/^www\./i, '');
-    return m.length > 40 ? m.slice(0, 39) + '…' : m;
-  }
-
-  function ancora(url, texto) {
-    return '<a class="link-ext" href="' + escapar(normalizarUrl(url)) + '" target="_blank" rel="noopener" title="' +
-      escapar(normalizarUrl(url)) + '">' + escapar(texto) + '</a>';
-  }
-
-  function celulaProcesso(p) {
-    var texto = p.processo || '-';
-    var url = ehUrl(p.link) ? p.link : (ehUrl(p.processo) ? p.processo : '');
-    if (url) return '<span class="proc">' + ancora(url, texto) + '</span>';
-    return '<span class="proc">' + escapar(texto) + '</span>';
-  }
-
-  function celulaLinks(p) {
-    var bruto = (p.linksRelacionados || '').trim();
-    if (!bruto) return '<span class="links-sem">—</span>';
-    var itens = bruto.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
-    var html = itens.map(function (linha) {
-      var rotulo = linha, url = linha;
-      var barra = linha.indexOf('|');
-      if (barra !== -1) {
-        rotulo = linha.slice(0, barra).trim();
-        url = linha.slice(barra + 1).trim();
-      }
-      if (!ehUrl(url)) return '<span class="obs">' + escapar(linha) + '</span>';
-      if (!rotulo || rotulo === url) rotulo = rotuloUrl(url);
-      return ancora(url, rotulo);
-    }).join('');
-    return '<div class="links-rel">' + html + '</div>';
-  }
-
-  // ---------- Chamadas ao servidor ----------
-  function carregando(ativo) { $('carregando').className = ativo ? 'ativo' : ''; }
-
-  function chamarServidor(nomeFn, args, msgSucesso) {
-    carregando(true);
-    var runner = google.script.run
-      .withSuccessHandler(function (resposta) {
-        carregando(false);
-        aplicarResposta(resposta);
-        if (msgSucesso) toast(msgSucesso);
-      })
-      .withFailureHandler(function (erro) {
-        carregando(false);
-        toast('Erro: ' + erro.message, true);
-      });
-    runner[nomeFn].apply(runner, args || []);
-  }
-
-  function aplicarResposta(resposta) {
-    dados = resposta.processos || [];
-    urlPlanilha = resposta.urlPlanilha || '';
-    if (urlPlanilha) {
-      var link = $('linkPlanilha');
-      link.href = urlPlanilha;
-      link.style.display = '';
-    }
-    preencherOpcoesStatus();
-    renderizar();
-  }
-
   function toast(msg, erro) {
     var t = $('toast');
     t.textContent = msg;
@@ -538,347 +645,80 @@
     clearTimeout(t._timer);
     t._timer = setTimeout(function () { t.className = ''; }, erro ? 6000 : 3000);
   }
+  function carregando(ativo) { $('carregando').className = ativo ? 'ativo' : ''; }
 
-  // ---------- Abas / filtros ----------
-  function dadosDaAba() {
-    return dados.filter(function (p) {
-      return abaAtual === 'arquivados' ? p.arquivado : !p.arquivado;
-    });
+  /* Chamada genérica ao servidor (Planner e Skills). */
+  function chamarFn(nomeFn, args, onOk, msgSucesso) {
+    carregando(true);
+    var runner = google.script.run
+      .withSuccessHandler(function (resp) { carregando(false); if (onOk) onOk(resp); if (msgSucesso) toast(msgSucesso); })
+      .withFailureHandler(function (erro) { carregando(false); toast('Erro: ' + erro.message, true); });
+    runner[nomeFn].apply(runner, args || []);
   }
+</script>
 
-  function filtrados() {
-    var busca = $('fBusca').value.trim().toLowerCase();
-    var status = $('fStatus').value;
-    var de = $('fDe').value, ate = $('fAte').value;
-    return dadosDaAba().filter(function (p) {
-      if (status && p.status !== status) return false;
-      if (de && (!ehData(p.dataStatus) || p.dataStatus < de)) return false;
-      if (ate && (!ehData(p.dataStatus) || p.dataStatus > ate)) return false;
-      if (busca) {
-        var alvo = (p.processo + ' ' + p.descricao + ' ' + p.obs + ' ' + p.status).toLowerCase();
-        if (alvo.indexOf(busca) === -1) return false;
-      }
-      return true;
-    });
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="marca">
+      <div class="logo">🗂️</div>
+      <div class="nome">Gestão<small>Painel de trabalho</small></div>
+    </div>
+    <button class="nav-item ativo" data-view="processos"><span class="ic">📋</span> Controle de Processos</button>
+    <button class="nav-item" data-view="planner"><span class="ic">🗓️</span> Planner</button>
+    <button class="nav-item" data-view="kanban"><span class="ic">🗃️</span> Kanban</button>
+    <button class="nav-item" data-view="skills"><span class="ic">🧩</span> Banco de Skills</button>
+    <div class="rodape-nav" id="rodapeNav"></div>
+  </aside>
+  <div class="fundo-sidebar" id="fundoSidebar"></div>
+
+  <div class="painel-principal">
+    <div class="topbar-mobile">
+      <button class="menu-btn" id="btnMenu" aria-label="Abrir menu">☰</button>
+      <span class="titulo-mobile" id="tituloMobile">Controle de Processos</span>
+    </div>
+
+    <?!= include('Gestao'); ?>
+    <?!= include('Planner'); ?>
+    <?!= include('Kanban'); ?>
+    <?!= include('Skills'); ?>
+
+  </div><!-- /painel-principal -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+<div id="carregando"><div class="girar"></div><span>Processando…</span></div>
+
+<script>
+  /* ================= Navegação entre telas ================= */
+  var TITULOS_VIEW = { processos: 'Controle de Processos', planner: 'Planner', kanban: 'Kanban', skills: 'Banco de Skills' };
+
+  function trocarView(view) {
+    document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('ativa', v.id === 'view-' + view); });
+    document.querySelectorAll('.nav-item').forEach(function (b) { b.classList.toggle('ativo', b.dataset.view === view); });
+    $('tituloMobile').textContent = TITULOS_VIEW[view] || '';
+    fecharSidebar();
+    if (view === 'planner' && !plannerCarregado) carregarPlanner();
+    if (view === 'kanban' && !kanbanCarregado) carregarKanban();
+    if (view === 'skills' && !skillsCarregadas) carregarSkills();
   }
+  function abrirSidebar() { $('sidebar').classList.add('aberta'); $('fundoSidebar').classList.add('aberto'); }
+  function fecharSidebar() { $('sidebar').classList.remove('aberta'); $('fundoSidebar').classList.remove('aberto'); }
 
-  function preencherOpcoesStatus() {
-    var selecionado = $('fStatus').value;
-    var opcoes = '<option value="">Todos</option>';
-    var opcoesForm = '';
-    statusConhecidos().forEach(function (s) {
-      opcoes += '<option value="' + escapar(s) + '">' + escapar(s) + '</option>';
-      opcoesForm += '<option value="' + escapar(s) + '">' + escapar(s) + '</option>';
-    });
-    $('fStatus').innerHTML = opcoes;
-    $('fStatus').value = selecionado;
-    var selForm = $('cStatus');
-    var valForm = selForm.value;
-    selForm.innerHTML = opcoesForm;
-    if (valForm) selForm.value = valForm;
-  }
-
-  // ---------- Renderização ----------
-  function renderizar() {
-    atualizarAbas();
-    renderizarTiles();
-    renderizarTabela();
-  }
-
-  function atualizarAbas() {
-    var ativos = 0, arquivados = 0;
-    dados.forEach(function (p) { p.arquivado ? arquivados++ : ativos++; });
-    $('contAtivos').textContent = ativos;
-    $('contArquivados').textContent = arquivados;
-    document.querySelectorAll('.aba').forEach(function (b) {
-      b.classList.toggle('ativa', b.dataset.aba === abaAtual);
-    });
-  }
-
-  function renderizarTiles() {
-    var base = dadosDaAba();
-    var vencidos = 0, proximos = 0;
-    var porStatus = {};
-    base.forEach(function (p) {
-      porStatus[p.status] = (porStatus[p.status] || 0) + 1;
-      if (p.status === 'Concluído') return;
-      var dias = diasAte(p.prazo);
-      if (dias === null) return;
-      if (dias < 0) vencidos++;
-      else if (dias <= DIAS_ALERTA_PRAZO) proximos++;
-    });
-
-    var filtroAtual = $('fStatus').value;
-    var html = '<div class="tile"><div class="rotulo">Total</div><div class="valor">' + base.length + '</div></div>';
-    statusConhecidos().forEach(function (s) {
-      if (!porStatus[s]) return;
-      var ativo = filtroAtual === s ? ' ativo' : '';
-      html += '<div class="tile clicavel' + ativo + '" data-status="' + escapar(s) + '">' +
-        '<div class="rotulo"><span class="ponto" style="background:' + corDoStatus(s) + '"></span>' + escapar(s) + '</div>' +
-        '<div class="valor">' + porStatus[s] + '</div></div>';
-    });
-    html += '<div class="tile"><div class="rotulo"><span class="ponto" style="background:var(--critical)"></span>Prazo vencido</div><div class="valor">' + vencidos + '</div></div>';
-    html += '<div class="tile"><div class="rotulo"><span class="ponto" style="background:var(--warning)"></span>Vence em ' + DIAS_ALERTA_PRAZO + ' dias</div><div class="valor">' + proximos + '</div></div>';
-    $('tiles').innerHTML = html;
-  }
-
-  function celulaPrazo(p) {
-    if (!ehData(p.prazo)) return '<span class="prazo-sem">—</span>';
-    var texto = formatarData(p.prazo);
-    if (p.status !== 'Concluído') {
-      var dias = diasAte(p.prazo);
-      if (dias < 0) return '<span class="prazo-badge prazo-vencido">' + texto + ' · vencido</span>';
-      if (dias <= DIAS_ALERTA_PRAZO) {
-        var rotulo = dias === 0 ? 'hoje' : (dias === 1 ? 'amanhã' : dias + ' dias');
-        return '<span class="prazo-badge prazo-proximo">' + texto + ' · ' + rotulo + '</span>';
-      }
-    }
-    return '<span class="prazo-normal">' + texto + '</span>';
-  }
-
-  function seletorStatus(p) {
-    var cor = corDoStatus(p.status);
-    var html = '<select class="badge" data-linha="' + p.linha + '" style="color:' + cor + ';background-color:' + rgba(cor, 0.14) + ';border-color:' + rgba(cor, 0.35) + '">';
-    var lista = statusConhecidos();
-    if (lista.indexOf(p.status) === -1) lista.push(p.status);
-    lista.forEach(function (s) {
-      html += '<option value="' + escapar(s) + '"' + (s === p.status ? ' selected' : '') + '>' + escapar(s) + '</option>';
-    });
-    return html + '</select>';
-  }
-
-  function renderizarTabela() {
-    var lista = filtrados();
-    var col = ordenacao.col, dir = ordenacao.dir === 'asc' ? 1 : -1;
-    lista.sort(function (a, b) {
-      var va = (a[col] || '').toLowerCase ? String(a[col] || '').toLowerCase() : a[col];
-      var vb = (b[col] || '').toLowerCase ? String(b[col] || '').toLowerCase() : b[col];
-      if (col === 'dataStatus' || col === 'prazo') {
-        va = ehData(a[col]) ? a[col] : (dir === 1 ? '9999' : '');
-        vb = ehData(b[col]) ? b[col] : (dir === 1 ? '9999' : '');
-      }
-      return va < vb ? -dir : va > vb ? dir : 0;
-    });
-
-    var totalAba = dadosDaAba().length;
-    var rotuloAba = abaAtual === 'arquivados' ? ' arquivados' : '';
-    $('contagem').textContent = lista.length === totalAba
-      ? totalAba + ' processos' + rotuloAba
-      : lista.length + ' de ' + totalAba + ' processos' + rotuloAba + ' (filtrado)';
-    $('subtitulo').textContent = 'Atualizado em ' + formatarData(hojeIso());
-
-    document.querySelectorAll('th[data-col]').forEach(function (th) {
-      th.textContent = th.textContent.replace(/ [↑↓]$/, '');
-      if (th.dataset.col === col) th.textContent += dir === 1 ? ' ↑' : ' ↓';
-    });
-
-    if (!lista.length) {
-      var vazioMsg = abaAtual === 'arquivados'
-        ? 'Nenhum processo arquivado.'
-        : 'Nenhum processo encontrado com os filtros atuais.';
-      $('corpoTabela').innerHTML = '<tr><td colspan="8" class="vazio">' + vazioMsg + '</td></tr>';
-      return;
-    }
-
-    $('corpoTabela').innerHTML = lista.map(function (p) {
-      var botaoArquivo = p.arquivado
-        ? '<button class="acao" title="Desarquivar" data-desarquivar="' + p.linha + '">📤</button>'
-        : '<button class="acao" title="Arquivar" data-arquivar="' + p.linha + '">📥</button>';
-      return '<tr>' +
-        '<td data-rotulo="Processo">' + celulaProcesso(p) + '</td>' +
-        '<td data-rotulo="Descrição"><span class="desc">' + escapar(p.descricao) + '</span></td>' +
-        '<td data-rotulo="Status">' + seletorStatus(p) + '</td>' +
-        '<td class="num" data-rotulo="Mudança de status">' + escapar(formatarData(p.dataStatus)) + '</td>' +
-        '<td data-rotulo="Prazo">' + celulaPrazo(p) + '</td>' +
-        '<td data-rotulo="Obs"><span class="obs">' + escapar(p.obs) + '</span></td>' +
-        '<td data-rotulo="Links relacionados">' + celulaLinks(p) + '</td>' +
-        '<td class="acoes-col">' +
-          '<button class="acao" title="Editar" data-editar="' + p.linha + '">✏️</button>' +
-          botaoArquivo +
-          '<button class="acao excluir" title="Excluir" data-excluir="' + p.linha + '">🗑️</button>' +
-        '</td></tr>';
-    }).join('');
-  }
-
-  // ---------- Formulário ----------
-  function abrirForm(p) {
-    preencherOpcoesStatus();
-    $('tituloForm').textContent = p ? 'Editar processo' : 'Novo processo';
-    $('cLinha').value = p ? p.linha : '';
-    $('cProcesso').value = p ? p.processo : '';
-    $('cLink').value = p ? (p.link || '') : '';
-    $('cDescricao').value = p ? p.descricao : '';
-    var status = p ? p.status : 'Em Andamento';
-    var sel = $('cStatus'), existe = false;
-    for (var i = 0; i < sel.options.length; i++) {
-      if (sel.options[i].value === status) { existe = true; break; }
-    }
-    if (status && !existe) sel.add(new Option(status, status));
-    sel.value = status;
-    $('cStatus').dataset.original = $('cStatus').value;
-    $('cDataStatus').value = p && ehData(p.dataStatus) ? p.dataStatus : hojeIso();
-    $('cPrazo').value = p && ehData(p.prazo) ? p.prazo : '';
-    $('cLinksRelacionados').value = p ? (p.linksRelacionados || '') : '';
-    $('cObs').value = p ? p.obs : '';
-
-    var edicao = !!p;
-    $('btnExcluirForm').style.display = edicao ? '' : 'none';
-    $('btnArquivarForm').style.display = edicao ? '' : 'none';
-    $('btnArquivarForm').textContent = (p && p.arquivado) ? 'Desarquivar' : 'Arquivar';
-
-    $('fundoForm').classList.add('aberto');
-    $('cProcesso').focus();
-  }
-
-  function fecharForm() { $('fundoForm').classList.remove('aberto'); }
-
-  // ---------- Eventos ----------
-  $('btnNovo').addEventListener('click', function () { abrirForm(null); });
-  $('btnCancelar').addEventListener('click', fecharForm);
-  $('fundoForm').addEventListener('click', function (e) { if (e.target === this) fecharForm(); });
-
-  $('cStatus').addEventListener('change', function () {
-    if (this.value !== this.dataset.original) $('cDataStatus').value = hojeIso();
+  document.querySelectorAll('.nav-item').forEach(function (b) {
+    b.addEventListener('click', function () { trocarView(b.dataset.view); });
   });
-
-  $('formProcesso').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var p = {
-      linha: $('cLinha').value || null,
-      processo: $('cProcesso').value.trim() || '-',
-      link: $('cLink').value.trim(),
-      descricao: $('cDescricao').value.trim(),
-      status: $('cStatus').value.trim() || 'Não iniciado',
-      dataStatus: $('cDataStatus').value,
-      prazo: $('cPrazo').value || '-',
-      linksRelacionados: $('cLinksRelacionados').value.trim(),
-      obs: $('cObs').value.trim()
-    };
-    fecharForm();
-    chamarServidor('salvarProcesso', [p], p.linha ? 'Processo atualizado.' : 'Processo criado.');
-  });
-
-  ['fBusca', 'fStatus', 'fDe', 'fAte'].forEach(function (id) {
-    $(id).addEventListener('input', renderizar);
-  });
-  $('btnLimpar').addEventListener('click', function () {
-    $('fBusca').value = ''; $('fStatus').value = ''; $('fDe').value = ''; $('fAte').value = '';
-    renderizar();
-  });
-
-  $('tiles').addEventListener('click', function (e) {
-    var tile = e.target.closest('.tile.clicavel');
-    if (!tile) return;
-    var s = tile.dataset.status;
-    $('fStatus').value = $('fStatus').value === s ? '' : s;
-    renderizar();
-  });
-
-  document.querySelector('thead').addEventListener('click', function (e) {
-    var th = e.target.closest('th[data-col]');
-    if (!th) return;
-    var col = th.dataset.col;
-    if (ordenacao.col === col) ordenacao.dir = ordenacao.dir === 'asc' ? 'desc' : 'asc';
-    else ordenacao = { col: col, dir: 'asc' };
-    renderizarTabela();
-  });
-
-  function pedirExclusao(linha) {
-    var proc = dados.find(function (x) { return x.linha == linha; });
-    linhaParaExcluir = linha;
-    $('textoConfirmar').textContent = 'Tem certeza que deseja excluir "' +
-      (proc ? (proc.processo !== '-' ? proc.processo : proc.descricao) : '') + '"? Essa ação não pode ser desfeita.';
-    $('fundoConfirmar').classList.add('aberto');
-  }
-
-  $('corpoTabela').addEventListener('click', function (e) {
-    var btnEditar = e.target.closest('[data-editar]');
-    if (btnEditar) {
-      var p = dados.find(function (x) { return x.linha == btnEditar.dataset.editar; });
-      if (p) abrirForm(p);
-      return;
-    }
-    var btnArquivar = e.target.closest('[data-arquivar]');
-    if (btnArquivar) {
-      chamarServidor('arquivarProcesso', [Number(btnArquivar.dataset.arquivar), true], 'Processo arquivado.');
-      return;
-    }
-    var btnDesarquivar = e.target.closest('[data-desarquivar]');
-    if (btnDesarquivar) {
-      chamarServidor('arquivarProcesso', [Number(btnDesarquivar.dataset.desarquivar), false], 'Processo desarquivado.');
-      return;
-    }
-    var btnExcluir = e.target.closest('[data-excluir]');
-    if (btnExcluir) {
-      pedirExclusao(btnExcluir.dataset.excluir);
-    }
-  });
-
-  $('corpoTabela').addEventListener('change', function (e) {
-    var sel = e.target.closest('select.badge');
-    if (!sel) return;
-    chamarServidor('alterarStatus', [Number(sel.dataset.linha), sel.value], 'Status atualizado.');
-  });
-
-  // Abas ativos / arquivados
-  $('abas').addEventListener('click', function (e) {
-    var aba = e.target.closest('.aba');
-    if (!aba) return;
-    abaAtual = aba.dataset.aba;
-    renderizar();
-  });
-
-  // Botões dentro do formulário de edição
-  $('btnArquivarForm').addEventListener('click', function () {
-    var linha = $('cLinha').value;
-    if (!linha) return;
-    var arquivar = this.textContent !== 'Desarquivar';
-    fecharForm();
-    chamarServidor('arquivarProcesso', [Number(linha), arquivar],
-      arquivar ? 'Processo arquivado.' : 'Processo desarquivado.');
-  });
-
-  $('btnExcluirForm').addEventListener('click', function () {
-    var linha = $('cLinha').value;
-    if (!linha) return;
-    fecharForm();
-    pedirExclusao(linha);
-  });
-
-  $('btnConfirmarNao').addEventListener('click', function () {
-    $('fundoConfirmar').classList.remove('aberto');
-    linhaParaExcluir = null;
-  });
-  $('fundoConfirmar').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('aberto'); });
-  $('btnVoltarEdicao').addEventListener('click', function () {
-    $('fundoConfirmar').classList.remove('aberto');
-    var p = dados.find(function (x) { return x.linha == linhaParaExcluir; });
-    linhaParaExcluir = null;
-    if (p) abrirForm(p);
-  });
-  $('btnConfirmarSim').addEventListener('click', function () {
-    $('fundoConfirmar').classList.remove('aberto');
-    if (linhaParaExcluir) chamarServidor('excluirProcesso', [Number(linhaParaExcluir)], 'Processo excluído.');
-    linhaParaExcluir = null;
-  });
+  $('btnMenu').addEventListener('click', abrirSidebar);
+  $('fundoSidebar').addEventListener('click', fecharSidebar);
 
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') {
-      fecharForm();
-      $('fundoConfirmar').classList.remove('aberto');
-    }
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.fundo-modal.aberto').forEach(function (m) { m.classList.remove('aberto'); });
+    if (typeof fecharDrawer === 'function') fecharDrawer();
+    fecharSidebar();
   });
 
-  // ---------- Início ----------
-  carregando(true);
-  google.script.run
-    .withSuccessHandler(function (r) { carregando(false); aplicarResposta(r); })
-    .withFailureHandler(function (erro) {
-      carregando(false);
-      $('subtitulo').textContent = 'Falha ao carregar.';
-      toast('Erro ao carregar: ' + erro.message, true);
-    })
-    .obterProcessos();
+  // ---------- Início: carrega a tela padrão (Processos) ----------
+  carregarProcessos();
 </script>
 </body>
 </html>
