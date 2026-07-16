@@ -410,14 +410,14 @@
       var fora = d.getMonth() !== mes ? ' fora' : '';
       var eHoje = iso === hoje ? ' hoje' : '';
       var doDia = atividadesDoDia(iso).filter(function (a) { return catVisivel(a.categoria); });
-      var chips = doDia.slice(0, 3).map(function (a) {
+      var chips = doDia.slice(0, 4).map(function (a) {
         var cor = corCategoria(a.categoria);
         var multi = ehData(a.dataFim) && a.dataFim > a.data ? '↔ ' : '';
         return '<div class="cal-chip' + (a.concluida ? ' feito' : '') + '" style="border-left-color:' + cor +
-          ';background:' + rgba(cor, 0.14) + ';color:' + cor + '">' +
+          ';background:' + rgba(cor, 0.14) + ';color:' + cor + '" title="' + escapar((a.inicio ? a.inicio + ' ' : '') + a.titulo) + '">' +
           multi + (a.inicio ? escapar(a.inicio) + ' ' : '') + escapar(a.titulo) + '</div>';
       }).join('');
-      var mais = doDia.length > 3 ? '<div class="cal-mais">+' + (doDia.length - 3) + ' mais</div>' : '';
+      var mais = doDia.length > 4 ? '<div class="cal-mais">+' + (doDia.length - 4) + ' mais</div>' : '';
       html += '<div class="cal-dia' + fora + eHoje + '" data-dia="' + iso + '" data-qtd="' +
         (doDia.length ? doDia.length + ' ●' : '') + '">' +
         '<span class="cal-num">' + d.getDate() + '</span>' + chips + mais + '</div>';
